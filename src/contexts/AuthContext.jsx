@@ -17,11 +17,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Fetch the user's role from Firestore
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUserRole(docSnap.data().role);
+        try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+            setUserRole(docSnap.data().role ?? null);
+          } else {
+            setUserRole(null);
+          }
+        } catch (error) {
+          console.error("Auth profile load error:", error);
+          setUserRole(null);
         }
         setCurrentUser(user);
       } else {

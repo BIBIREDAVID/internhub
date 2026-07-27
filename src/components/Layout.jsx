@@ -6,34 +6,51 @@ import { useAuth } from "../contexts/AuthContext";
 
 const navItems = {
   hr: [
-    { label: "Dashboard", path: "/hr/dashboard", icon: "📊" },
-    { label: "Applications", path: "/hr/applications", icon: "📋" },
-    { label: "Interns", path: "/hr/interns", icon: "👥" },
-    { label: "Attendance", path: "/hr/attendance", icon: "🕐" },
-    { label: "Reports", path: "/hr/reports", icon: "📈" },
+    { section: "OVERVIEW", items: [
+      { label: "Dashboard", path: "/hr/dashboard", icon: "⊞" },
+    ]},
+    { section: "RECRUITMENT", items: [
+      { label: "Applications", path: "/hr/applications", icon: "📋", badge: null },
+      { label: "Hiring Pipeline", path: "/hr/pipeline", icon: "⋯" },
+    ]},
+    { section: "WORKFORCE", items: [
+      { label: "All Interns", path: "/hr/interns", icon: "👤" },
+      { label: "Onboarding", path: "/hr/onboarding", icon: "🚀", badge: null },
+      { label: "Attendance", path: "/hr/attendance", icon: "🕐" },
+    ]},
+    { section: "ANALYTICS", items: [
+      { label: "Reports", path: "/hr/reports", icon: "📈" },
+    ]},
   ],
   manager: [
-    { label: "Dashboard", path: "/manager/dashboard", icon: "📊" },
-    { label: "My Interns", path: "/manager/interns", icon: "👥" },
-    { label: "Tasks", path: "/manager/tasks", icon: "✅" },
-    { label: "Attendance", path: "/manager/attendance", icon: "🕐" },
+    { section: "OVERVIEW", items: [
+      { label: "Dashboard", path: "/manager/dashboard", icon: "⊞" },
+    ]},
+    { section: "WORKFORCE", items: [
+      { label: "My Interns", path: "/manager/interns", icon: "👤" },
+      { label: "Tasks", path: "/manager/tasks", icon: "✅" },
+      { label: "Attendance", path: "/manager/attendance", icon: "🕐" },
+    ]},
   ],
   intern: [
-    { label: "Dashboard", path: "/intern/dashboard", icon: "📊" },
-    { label: "My Tasks", path: "/intern/tasks", icon: "✅" },
-    { label: "Attendance", path: "/intern/attendance", icon: "🕐" },
-    { label: "Onboarding", path: "/intern/onboarding", icon: "🚀" },
+    { section: "OVERVIEW", items: [
+      { label: "Dashboard", path: "/intern/dashboard", icon: "⊞" },
+    ]},
+    { section: "MY WORK", items: [
+      { label: "My Tasks", path: "/intern/tasks", icon: "✅" },
+      { label: "Attendance", path: "/intern/attendance", icon: "🕐" },
+      { label: "Onboarding", path: "/intern/onboarding", icon: "🚀" },
+    ]},
   ],
 };
 
-export default function Layout({ children }) {
+export default function Layout({ children, topbarActions, pageTitle }) {
   const { currentUser, userRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
 
-  // Detect system color scheme
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     setDark(mq.matches);
@@ -42,105 +59,111 @@ export default function Layout({ children }) {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Close sidebar on route change (mobile)
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   async function handleLogout() {
     await signOut(auth);
     navigate("/login");
   }
 
-  const items = navItems[userRole] || [];
-  const t = dark ? darkTokens : lightTokens;
+  const sections = navItems[userRole] || [];
+  const t = dark ? dark_t : light_t;
+
+  // Find current page label
+  let currentLabel = pageTitle || "Dashboard";
+  sections.forEach(s => s.items.forEach(i => {
+    if (i.path === location.pathname) currentLabel = pageTitle || i.label;
+  }));
 
   return (
-    <div style={{ ...styles.container, background: t.bg, color: t.text }}>
+    <div style={{ ...s.root, background: t.bg, color: t.text }}>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          style={styles.overlay}
-        />
-      )}
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={s.overlay} />}
 
       {/* Sidebar */}
       <div style={{
-        ...styles.sidebar,
+        ...s.sidebar,
         background: t.surface,
         borderRight: `1px solid ${t.border}`,
         transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
       }}>
-        <div style={{ ...styles.logo, borderBottom: `1px solid ${t.border}` }}>
-          <span style={{ ...styles.logoText, color: t.accent }}>InternHub</span>
-          <button onClick={() => setSidebarOpen(false)} style={styles.closeBtn}>✕</button>
+        {/* Logo */}
+        <div style={{ ...s.logoWrap, borderBottom: `1px solid ${t.border}` }}>
+          <div>
+            <div style={{ ...s.logoText, color: t.accent }}>InternHub</div>
+            <div style={{ ...s.logoSub, color: t.muted }}>
+              {userRole === "hr" ? "HR Administration" : userRole === "manager" ? "Team Management" : "Intern Portal"}
+            </div>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} style={{ ...s.closeBtn, color: t.muted }}>✕</button>
         </div>
 
-        <div style={{ ...styles.roleBadge, background: t.bg, color: t.accent }}>
-          {userRole?.toUpperCase()} PORTAL
-        </div>
-
-        <nav style={styles.nav}>
-          {items.map((item) => {
-            const active = location.pathname === item.path;
-            return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                style={{
-                  ...styles.navItem,
-                  background: active ? t.accent : "transparent",
-                  color: active ? "#fff" : t.muted,
-                }}
-              >
-                <span style={styles.navIcon}>{item.icon}</span>
-                <span style={styles.navLabel}>{item.label}</span>
-              </button>
-            );
-          })}
+        {/* Nav */}
+        <nav style={s.nav}>
+          {sections.map((section) => (
+            <div key={section.section} style={s.navSection}>
+              <div style={{ ...s.sectionLabel, color: t.muted }}>{section.section}</div>
+              {section.items.map((item) => {
+                const active = location.pathname === item.path;
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    style={{
+                      ...s.navItem,
+                      background: active ? t.accent + "18" : "transparent",
+                      color: active ? t.accent : t.text,
+                      fontWeight: active ? "600" : "400",
+                      borderLeft: active ? `3px solid ${t.accent}` : "3px solid transparent",
+                    }}
+                  >
+                    <span style={s.navIcon}>{item.icon}</span>
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span style={{ ...s.badge, background: t.accent }}>{item.badge}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        <button onClick={handleLogout} style={{ ...styles.logoutBtn, borderTop: `1px solid ${t.border}` }}>
-          <span>🚪</span>
-          <span>Logout</span>
-        </button>
+        {/* User */}
+        <div style={{ ...s.userWrap, borderTop: `1px solid ${t.border}` }}>
+          <div style={{ ...s.userAvatar, background: t.accent }}>
+            {currentUser?.email?.[0]?.toUpperCase()}
+          </div>
+          <div style={s.userInfo}>
+            <div style={{ ...s.userName, color: t.text }}>{currentUser?.email?.split("@")[0]}</div>
+            <div style={{ ...s.userRole, color: t.muted }}>{userRole === "hr" ? "HR Manager" : userRole === "manager" ? "Team Manager" : "Intern"}</div>
+          </div>
+          <button onClick={handleLogout} style={{ ...s.logoutBtn, color: t.muted }} title="Logout">⏻</button>
+        </div>
       </div>
 
       {/* Main */}
-      <div style={styles.main}>
+      <div style={s.main}>
         {/* Topbar */}
         <div style={{
-          ...styles.topbar,
+          ...s.topbar,
           background: t.surface,
           borderBottom: `1px solid ${t.border}`,
         }}>
-          <div style={styles.topbarLeft}>
-            <button onClick={() => setSidebarOpen(true)} style={{ ...styles.menuBtn, color: t.muted }}>
-              ☰
-            </button>
-            <span style={{ ...styles.pageTitle, color: t.text }}>
-              {items.find((i) => i.path === location.pathname)?.label || "Dashboard"}
-            </span>
+          <div style={s.topbarLeft}>
+            <button onClick={() => setSidebarOpen(true)} style={{ ...s.menuBtn, color: t.muted }}>☰</button>
+            <h1 style={{ ...s.pageTitle, color: t.text }}>{currentLabel}</h1>
           </div>
-          <div style={styles.topbarRight}>
-            {/* Dark/light toggle */}
-            <button
-              onClick={() => setDark(!dark)}
-              style={{ ...styles.themeBtn, background: t.bg, color: t.muted, border: `1px solid ${t.border}` }}
-            >
+          <div style={s.topbarRight}>
+            <button onClick={() => setDark(!dark)} style={{ ...s.themeBtn, background: t.bg, color: t.muted, border: `1px solid ${t.border}` }}>
               {dark ? "☀️" : "🌙"}
             </button>
-            <div style={{ ...styles.avatar, background: t.accent }}>
-              {currentUser?.email?.[0]?.toUpperCase()}
-            </div>
-            <span style={{ ...styles.email, color: t.muted }}>{currentUser?.email}</span>
+            {topbarActions}
           </div>
         </div>
 
         {/* Content */}
-        <div style={{ ...styles.content, background: t.bg }}>
+        <div style={{ ...s.content, background: t.bg }}>
           {children}
         </div>
       </div>
@@ -148,169 +171,52 @@ export default function Layout({ children }) {
   );
 }
 
-// Token sets
-const darkTokens = {
+const light_t = {
+  bg: "#f8fafc",
+  surface: "#ffffff",
+  border: "#e2e8f0",
+  text: "#0f172a",
+  muted: "#94a3b8",
+  accent: "#2563eb",
+  cardBg: "#ffffff",
+};
+
+const dark_t = {
   bg: "#0f172a",
   surface: "#1e293b",
   border: "#334155",
   text: "#f1f5f9",
-  muted: "#94a3b8",
-  accent: "#3b82f6",
-};
-
-const lightTokens = {
-  bg: "#f1f5f9",
-  surface: "#ffffff",
-  border: "#e2e8f0",
-  text: "#0f172a",
   muted: "#64748b",
-  accent: "#2563eb",
+  accent: "#3b82f6",
+  cardBg: "#1e293b",
 };
 
-const styles = {
-  container: {
-    display: "flex",
-    height: "100vh",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    position: "relative",
-    overflow: "hidden",
-  },
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.5)",
-    zIndex: 10,
-  },
-  sidebar: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    height: "100vh",
-    width: "240px",
-    display: "flex",
-    flexDirection: "column",
-    zIndex: 20,
-    transition: "transform 0.25s ease",
-  },
-  logo: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "20px 16px",
-  },
-  logoText: {
-    fontWeight: "700",
-    fontSize: "18px",
-  },
-  closeBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#64748b",
-    cursor: "pointer",
-    fontSize: "16px",
-    padding: "4px 8px",
-  },
-  roleBadge: {
-    margin: "12px 16px",
-    padding: "4px 10px",
-    borderRadius: "6px",
-    fontSize: "10px",
-    fontWeight: "600",
-    letterSpacing: "1px",
-    textAlign: "center",
-  },
-  nav: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    padding: "8px",
-    flex: 1,
-  },
-  navItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "10px 12px",
-    borderRadius: "8px",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "500",
-    width: "100%",
-    textAlign: "left",
-    transition: "background 0.15s",
-  },
-  navIcon: { fontSize: "16px", flexShrink: 0 },
-  navLabel: {},
-  logoutBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    padding: "16px 20px",
-    background: "transparent",
-    border: "none",
-    color: "#ef4444",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "500",
-  },
-  main: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    width: "100%",
-  },
-  topbar: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 16px",
-    height: "60px",
-    flexShrink: 0,
-  },
-  topbarLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  menuBtn: {
-    background: "transparent",
-    border: "none",
-    fontSize: "20px",
-    cursor: "pointer",
-    padding: "4px 8px",
-    lineHeight: 1,
-  },
-  pageTitle: {
-    fontSize: "17px",
-    fontWeight: "600",
-  },
-  topbarRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  },
-  themeBtn: {
-    borderRadius: "8px",
-    padding: "6px 10px",
-    cursor: "pointer",
-    fontSize: "14px",
-  },
-  avatar: {
-    width: "34px",
-    height: "34px",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "700",
-    fontSize: "13px",
-    color: "#fff",
-    flexShrink: 0,
-  },
-  email: {
-    fontSize: "13px",
-    display: "none", // hidden on mobile, shown on larger screens via inline override
-  },
+const s = {
+  root: { display: "flex", height: "100vh", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" },
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 10 },
+  sidebar: { position: "fixed", top: 0, left: 0, height: "100vh", width: "220px", display: "flex", flexDirection: "column", zIndex: 20, transition: "transform 0.25s ease" },
+  logoWrap: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 16px" },
+  logoText: { fontSize: "17px", fontWeight: "700" },
+  logoSub: { fontSize: "11px", marginTop: "2px" },
+  closeBtn: { background: "transparent", border: "none", cursor: "pointer", fontSize: "16px", padding: "4px" },
+  nav: { flex: 1, overflowY: "auto", padding: "8px 0" },
+  navSection: { marginBottom: "8px" },
+  sectionLabel: { fontSize: "10px", fontWeight: "600", letterSpacing: "0.8px", padding: "8px 16px 4px" },
+  navItem: { display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "9px 16px", border: "none", cursor: "pointer", fontSize: "13.5px", textAlign: "left", transition: "all 0.15s" },
+  navIcon: { fontSize: "14px", width: "18px", textAlign: "center", flexShrink: 0 },
+  badge: { marginLeft: "auto", minWidth: "18px", height: "18px", borderRadius: "9px", fontSize: "10px", fontWeight: "700", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" },
+  userWrap: { display: "flex", alignItems: "center", gap: "10px", padding: "14px 16px" },
+  userAvatar: { width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "13px", color: "#fff", flexShrink: 0 },
+  userInfo: { flex: 1, overflow: "hidden" },
+  userName: { fontSize: "13px", fontWeight: "600", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  userRole: { fontSize: "11px", marginTop: "1px" },
+  logoutBtn: { background: "transparent", border: "none", cursor: "pointer", fontSize: "16px", padding: "4px", flexShrink: 0 },
+  main: { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", width: "100%" },
+  topbar: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: "58px", flexShrink: 0 },
+  topbarLeft: { display: "flex", alignItems: "center", gap: "12px" },
+  menuBtn: { background: "transparent", border: "none", fontSize: "20px", cursor: "pointer", padding: "4px", lineHeight: 1 },
+  pageTitle: { fontSize: "18px", fontWeight: "600", margin: 0 },
+  topbarRight: { display: "flex", alignItems: "center", gap: "10px" },
+  themeBtn: { borderRadius: "8px", padding: "6px 10px", cursor: "pointer", fontSize: "14px" },
+  content: { flex: 1, overflow: "auto", padding: "24px" },
 };
