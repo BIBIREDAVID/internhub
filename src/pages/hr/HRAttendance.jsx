@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../../firebase";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { theme } from "../../theme";
+import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
+
+const attendanceConstraints = [orderBy("date", "desc")];
 
 function displayTime(isoString) {
   if (!isoString) return "—";
@@ -11,26 +15,18 @@ function displayTime(isoString) {
 }
 
 export default function HRAttendance() {
-  const [attendance, setAttendance] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const unsubAttendance = onSnapshot(
-      query(collection(db, "attendance")),
-      (snapshot) => {
-        setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Attendance load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load attendance."));
-        setLoading(false);
-      }
-    );
+  const { docs: attendance, loading, hasMore, loadMore } = usePaginatedCollection(
+    "attendance",
+    attendanceConstraints,
+    30,
+    (error) => notifyError(friendlyFirestoreError(error, "Couldn't load attendance."))
+  );
 
+  useEffect(() => {
     const unsubUsers = onSnapshot(
       query(collection(db, "users")),
       (snapshot) => {
@@ -42,10 +38,7 @@ export default function HRAttendance() {
       }
     );
 
-    return () => {
-      unsubAttendance();
-      unsubUsers();
-    };
+    return unsubUsers;
   }, []);
 
   const visibleRecords = useMemo(() => {
@@ -87,10 +80,10 @@ export default function HRAttendance() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Present", value: stats.present, color: "#22c55e" },
-          { label: "Late", value: stats.late, color: "#f59e0b" },
-          { label: "Absent", value: stats.absent, color: "#ef4444" },
-          { label: "Comments", value: stats.comments, color: "#3b82f6" },
+          { label: "Present", value: stats.present, color: theme.success },
+          { label: "Late", value: stats.late, color: theme.warning },
+          { label: "Absent", value: stats.absent, color: theme.danger },
+          { label: "Comments", value: stats.comments, color: theme.primary },
         ].map((stat) => (
           <div key={stat.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
@@ -112,9 +105,9 @@ export default function HRAttendance() {
             onClick={() => setFilter(value)}
             style={{
               ...styles.filterBtn,
-              background: filter === value ? "#3b82f6" : "#1e293b",
-              color: filter === value ? "#fff" : "#94a3b8",
-              borderColor: filter === value ? "#3b82f6" : "#334155",
+              background: filter === value ? theme.primary : theme.surface,
+              color: filter === value ? "#fff" : theme.muted,
+              borderColor: filter === value ? theme.primary : theme.border,
             }}
           >
             {value}
@@ -146,10 +139,10 @@ export default function HRAttendance() {
                             ...styles.statusPill,
                             background:
                               record.status === "present"
-                                ? "#166534"
+                                ? theme.successSoft
                                 : record.status === "late"
-                                  ? "#92400e"
-                                  : "#991b1b",
+                                  ? theme.warningSoft
+                                  : theme.dangerSoft,
                           }}
                         >
                           {record.status || "present"}
@@ -167,35 +160,39 @@ export default function HRAttendance() {
             })
           )}
         </div>
+        {hasMore && (
+          <button onClick={loadMore} style={styles.loadMoreBtn}>Load more</button>
+        )}
       </div>
     </Layout>
   );
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
+  loadMoreBtn: { marginTop: "16px", width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, cursor: "pointer", fontSize: "13px", fontWeight: "600" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "16px", marginBottom: "24px" },
-  statCard: { background: "#1e293b", borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
+  statCard: { background: theme.surface, borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
   statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
   toolbar: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" },
-  searchInput: { flex: "1 1 240px", padding: "10px 12px", background: "#0f172a", border: "1px solid #334155", borderRadius: "8px", color: "#f8fafc", fontSize: "14px" },
+  searchInput: { flex: "1 1 240px", padding: "10px 12px", background: theme.bg, border: "1px solid #334155", borderRadius: "8px", color: theme.text, fontSize: "14px" },
   filterBtn: { borderRadius: "999px", border: "1px solid", padding: "8px 14px", fontSize: "13px", cursor: "pointer" },
-  card: { background: "#1e293b", borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
+  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   list: { display: "flex", flexDirection: "column", gap: "12px" },
-  row: { background: "#0f172a", border: "1px solid #334155", borderRadius: "12px", padding: "14px" },
+  row: { background: theme.bg, border: "1px solid #334155", borderRadius: "12px", padding: "14px" },
   rowMain: { display: "flex", flexDirection: "column", gap: "12px" },
   rowHeader: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" },
-  rowTitle: { color: "#f8fafc", fontWeight: "700", fontSize: "14px" },
-  rowMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "3px" },
+  rowTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
+  rowMeta: { color: theme.muted, fontSize: "12px", marginTop: "3px" },
   rowRight: { display: "flex", alignItems: "center", gap: "8px" },
   statusPill: { padding: "4px 10px", borderRadius: "999px", color: "#fff", fontSize: "11px", fontWeight: "700" },
-  commentBox: { marginTop: "10px", background: "#111827", border: "1px solid #334155", borderRadius: "10px", padding: "12px" },
-  commentLabel: { color: "#94a3b8", fontSize: "12px", marginBottom: "4px" },
+  commentBox: { marginTop: "10px", background: theme.surfaceAlt, border: "1px solid #334155", borderRadius: "10px", padding: "12px" },
+  commentLabel: { color: theme.muted, fontSize: "12px", marginBottom: "4px" },
   commentText: { color: "#e2e8f0", fontSize: "13px", lineHeight: 1.5 },
-  empty: { color: "#94a3b8", fontSize: "13px", margin: 0 },
+  empty: { color: theme.muted, fontSize: "13px", margin: 0 },
 };

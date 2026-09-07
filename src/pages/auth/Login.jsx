@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../firebase";
+import { theme } from "../../theme";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -96,10 +97,10 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#0f172a",
+    background: theme.bg,
   },
   card: {
-    background: "#1e293b",
+    background: theme.surface,
     padding: "40px",
     borderRadius: "16px",
     width: "100%",
@@ -114,14 +115,14 @@ const styles = {
     textAlign: "center",
   },
   subtitle: {
-    color: "#64748b",
+    color: theme.faint,
     fontSize: "14px",
     textAlign: "center",
     marginBottom: "32px",
   },
   error: {
-    background: "#fee2e2",
-    color: "#dc2626",
+    background: theme.dangerBg,
+    color: theme.dangerStrong,
     padding: "10px 14px",
     borderRadius: "8px",
     fontSize: "13px",
@@ -138,7 +139,7 @@ const styles = {
     gap: "6px",
   },
   label: {
-    color: "#94a3b8",
+    color: theme.muted,
     fontSize: "13px",
     fontWeight: "500",
   },
@@ -146,7 +147,7 @@ const styles = {
     padding: "10px 14px",
     borderRadius: "8px",
     border: "1px solid #334155",
-    background: "#0f172a",
+    background: theme.bg,
     color: "#fff",
     fontSize: "14px",
     outline: "none",
@@ -155,7 +156,7 @@ const styles = {
     padding: "12px",
     borderRadius: "8px",
     border: "none",
-    background: "#3b82f6",
+    background: theme.primary,
     color: "#fff",
     fontSize: "15px",
     fontWeight: "600",

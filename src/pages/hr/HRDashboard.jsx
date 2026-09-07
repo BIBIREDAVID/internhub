@@ -3,6 +3,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { theme } from "../../theme";
 
 export default function HRDashboard() {
   const { currentUser } = useAuth();
@@ -80,10 +81,10 @@ export default function HRDashboard() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Interns", value: interns.length, color: "#3b82f6" },
-          { label: "Managers", value: managers.length, color: "#a855f7" },
-          { label: "Active Tasks", value: activeTasks.length, color: "#f59e0b" },
-          { label: "Completion Rate", value: `${completionRate}%`, color: "#22c55e" },
+          { label: "Interns", value: interns.length, color: theme.primary },
+          { label: "Managers", value: managers.length, color: theme.info },
+          { label: "Active Tasks", value: activeTasks.length, color: theme.warning },
+          { label: "Completion Rate", value: `${completionRate}%`, color: theme.success },
         ].map((stat) => (
           <div key={stat.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
@@ -137,10 +138,10 @@ export default function HRDashboard() {
                           ...styles.status,
                           background:
                             task.status === "completed"
-                              ? "#166534"
+                              ? theme.successSoft
                               : task.status === "in-progress"
                                 ? "#1d4ed8"
-                                : "#92400e",
+                                : theme.warningSoft,
                         }}
                       >
                         {task.status || "pending"}
@@ -177,10 +178,10 @@ export default function HRDashboard() {
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   statsRow: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
@@ -188,29 +189,29 @@ const styles = {
     marginBottom: "24px",
   },
   statCard: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     textAlign: "center",
     border: "1px solid #334155",
   },
   statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" },
-  card: { background: "#1e293b", borderRadius: "12px", padding: "20px", border: "1px solid #334155", marginBottom: "16px" },
+  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155", marginBottom: "16px" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   list: { display: "flex", flexDirection: "column", gap: "10px" },
   row: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    background: "#0f172a",
+    background: theme.bg,
     borderRadius: "8px",
     padding: "12px",
     border: "1px solid #334155",
   },
   taskItem: {
-    background: "#0f172a",
+    background: theme.bg,
     borderRadius: "8px",
     padding: "12px",
     border: "1px solid #334155",
@@ -218,12 +219,12 @@ const styles = {
   taskTop: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" },
   rowMain: { flex: 1, minWidth: 0 },
   rowTitle: { fontWeight: "600", fontSize: "14px", color: "#f1f5f9" },
-  rowMeta: { color: "#64748b", fontSize: "12px", marginTop: "2px" },
+  rowMeta: { color: theme.faint, fontSize: "12px", marginTop: "2px" },
   avatar: {
     width: "36px",
     height: "36px",
     borderRadius: "50%",
-    background: "#3b82f6",
+    background: theme.primary,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -236,7 +237,7 @@ const styles = {
     marginLeft: "auto",
     padding: "4px 10px",
     borderRadius: "999px",
-    background: "#334155",
+    background: theme.border,
     color: "#cbd5e1",
     fontSize: "11px",
     whiteSpace: "nowrap",
@@ -249,5 +250,5 @@ const styles = {
     fontWeight: "600",
     whiteSpace: "nowrap",
   },
-  empty: { color: "#64748b", fontSize: "13px" },
+  empty: { color: theme.faint, fontSize: "13px" },
 };

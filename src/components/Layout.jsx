@@ -4,6 +4,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import Toaster from "./Toaster";
+import { theme } from "../theme";
 
 const navItems = {
   hr: [
@@ -50,16 +51,18 @@ export default function Layout({ children, topbarActions, pageTitle }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(prefers-color-scheme: dark)").matches : false
+  );
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    setDark(mq.matches);
     const handler = (e) => setDark(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- closes the mobile nav drawer on route change
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   async function handleLogout() {
@@ -185,13 +188,13 @@ const light_t = {
 };
 
 const dark_t = {
-  bg: "#0f172a",
-  surface: "#1e293b",
-  border: "#334155",
-  text: "#f1f5f9",
-  muted: "#64748b",
-  accent: "#3b82f6",
-  cardBg: "#1e293b",
+  bg: theme.bg,
+  surface: theme.surface,
+  border: theme.border,
+  text: theme.text,
+  muted: theme.faint,
+  accent: theme.primary,
+  cardBg: theme.surface,
 };
 
 const s = {

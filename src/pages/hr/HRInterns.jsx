@@ -1,32 +1,36 @@
-import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, updateDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { db } from "../../firebase";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { theme } from "../../theme";
+import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
+
+const internConstraints = [where("role", "==", "intern")];
 
 export default function HRInterns() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [managers, setManagers] = useState([]);
+  const { docs: interns, loading, hasMore, loadMore } = usePaginatedCollection(
+    "users",
+    internConstraints,
+    25,
+    (error) => notifyError(friendlyFirestoreError(error, "Couldn't load interns."))
+  );
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(
-      query(collection(db, "users")),
+    const unsubManagers = onSnapshot(
+      query(collection(db, "users"), where("role", "==", "manager")),
       (snapshot) => {
-        setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
+        setManagers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
       },
       (error) => {
-        console.error("Users load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load interns."));
-        setLoading(false);
+        console.error("Managers load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load managers."));
       }
     );
 
-    return unsubUsers;
+    return unsubManagers;
   }, []);
-
-  const interns = useMemo(() => users.filter((user) => user.role === "intern"), [users]);
-  const managers = useMemo(() => users.filter((user) => user.role === "manager"), [users]);
 
   async function assignManager(internId, managerId) {
     try {
@@ -56,10 +60,10 @@ export default function HRInterns() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Interns", value: interns.length, color: "#3b82f6" },
-          { label: "Managers", value: managers.length, color: "#a855f7" },
-          { label: "Assigned", value: interns.filter((intern) => intern.managerId).length, color: "#22c55e" },
-          { label: "Unassigned", value: interns.filter((intern) => !intern.managerId).length, color: "#f59e0b" },
+          { label: "Interns", value: interns.length, color: theme.primary },
+          { label: "Managers", value: managers.length, color: theme.info },
+          { label: "Assigned", value: interns.filter((intern) => intern.managerId).length, color: theme.success },
+          { label: "Unassigned", value: interns.filter((intern) => !intern.managerId).length, color: theme.warning },
         ].map((stat) => (
           <div key={stat.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
@@ -122,35 +126,39 @@ export default function HRInterns() {
             ))
           )}
         </div>
+        {hasMore && (
+          <button onClick={loadMore} style={styles.loadMoreBtn}>Load more</button>
+        )}
       </div>
     </Layout>
   );
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
+  loadMoreBtn: { marginTop: "16px", width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, cursor: "pointer", fontSize: "13px", fontWeight: "600" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "16px", marginBottom: "24px" },
-  statCard: { background: "#1e293b", borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
+  statCard: { background: theme.surface, borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
   statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
-  card: { background: "#1e293b", borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
+  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   list: { display: "flex", flexDirection: "column", gap: "12px" },
-  row: { display: "flex", gap: "12px", alignItems: "flex-start", background: "#0f172a", border: "1px solid #334155", borderRadius: "12px", padding: "14px" },
-  avatar: { width: "40px", height: "40px", borderRadius: "50%", background: "#3b82f6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", flexShrink: 0 },
+  row: { display: "flex", gap: "12px", alignItems: "flex-start", background: theme.bg, border: "1px solid #334155", borderRadius: "12px", padding: "14px" },
+  avatar: { width: "40px", height: "40px", borderRadius: "50%", background: theme.primary, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", flexShrink: 0 },
   rowMain: { flex: 1, minWidth: 0 },
   rowHeader: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" },
-  rowTitle: { color: "#f8fafc", fontWeight: "700", fontSize: "14px" },
-  rowMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "3px" },
+  rowTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
+  rowMeta: { color: theme.muted, fontSize: "12px", marginTop: "3px" },
   rowGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginTop: "12px" },
-  label: { color: "#94a3b8", fontSize: "12px", marginBottom: "4px" },
-  value: { color: "#f8fafc", fontSize: "14px", fontWeight: "600" },
-  input: { width: "100%", padding: "10px 12px", background: "#111827", border: "1px solid #334155", borderRadius: "8px", color: "#f8fafc", fontSize: "14px" },
-  pill: { padding: "4px 10px", borderRadius: "999px", background: "#334155", color: "#cbd5e1", fontSize: "11px", whiteSpace: "nowrap" },
+  label: { color: theme.muted, fontSize: "12px", marginBottom: "4px" },
+  value: { color: theme.text, fontSize: "14px", fontWeight: "600" },
+  input: { width: "100%", padding: "10px 12px", background: theme.surfaceAlt, border: "1px solid #334155", borderRadius: "8px", color: theme.text, fontSize: "14px" },
+  pill: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: "#cbd5e1", fontSize: "11px", whiteSpace: "nowrap" },
   tags: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  tag: { padding: "4px 10px", borderRadius: "999px", background: "#334155", color: "#cbd5e1", fontSize: "11px" },
-  empty: { color: "#94a3b8", fontSize: "13px", margin: 0 },
+  tag: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: "#cbd5e1", fontSize: "11px" },
+  empty: { color: theme.muted, fontSize: "13px", margin: 0 },
 };

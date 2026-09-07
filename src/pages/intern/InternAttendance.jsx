@@ -4,6 +4,7 @@ import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { theme } from "../../theme";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -189,10 +190,10 @@ export default function InternAttendance() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Present", value: presentCount, color: "#22c55e" },
-          { label: "Late", value: lateCount, color: "#f59e0b" },
-          { label: "Absent", value: absentCount, color: "#ef4444" },
-          { label: "Attendance Rate", value: `${attendanceRate}%`, color: "#3b82f6" },
+          { label: "Present", value: presentCount, color: theme.success },
+          { label: "Late", value: lateCount, color: theme.warning },
+          { label: "Absent", value: absentCount, color: theme.danger },
+          { label: "Attendance Rate", value: `${attendanceRate}%`, color: theme.primary },
         ].map((stat) => (
           <div key={stat.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
@@ -234,12 +235,12 @@ export default function InternAttendance() {
                   ...styles.dayDot,
                   background:
                     day.status === "present"
-                      ? "#22c55e"
+                      ? theme.success
                       : day.status === "late"
-                        ? "#f59e0b"
+                        ? theme.warning
                         : day.status === "absent"
-                          ? "#ef4444"
-                          : "#334155",
+                          ? theme.danger
+                          : theme.border,
                 }}
               />
               <div style={styles.dayStatus}>{day.status === "missing" ? "No record" : day.status}</div>
@@ -293,10 +294,10 @@ export default function InternAttendance() {
                     ...styles.statusPill,
                     background:
                       record.status === "present"
-                        ? "#166534"
+                        ? theme.successSoft
                         : record.status === "late"
-                          ? "#92400e"
-                          : "#991b1b",
+                          ? theme.warningSoft
+                          : theme.dangerSoft,
                   }}
                 >
                   {record.status || "present"}
@@ -311,14 +312,14 @@ export default function InternAttendance() {
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   actions: { display: "flex", gap: "10px", flexWrap: "wrap" },
   primaryBtn: {
     padding: "10px 16px",
-    background: "#3b82f6",
+    background: theme.primary,
     color: "#fff",
     border: "none",
     borderRadius: "8px",
@@ -327,7 +328,7 @@ const styles = {
   },
   secondaryBtn: {
     padding: "10px 16px",
-    background: "#1e293b",
+    background: theme.surface,
     color: "#e2e8f0",
     border: "1px solid #334155",
     borderRadius: "8px",
@@ -341,16 +342,16 @@ const styles = {
     marginBottom: "24px",
   },
   statCard: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     textAlign: "center",
     border: "1px solid #334155",
   },
   statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
   card: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     border: "1px solid #334155",
@@ -358,11 +359,11 @@ const styles = {
   },
   cardHeader: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
-  cardSub: { color: "#94a3b8", fontSize: "12px", margin: "4px 0 0" },
+  cardSub: { color: theme.muted, fontSize: "12px", margin: "4px 0 0" },
   summaryBadge: {
     padding: "6px 10px",
     borderRadius: "999px",
-    background: "#0f172a",
+    background: theme.bg,
     border: "1px solid #334155",
     color: "#cbd5e1",
     fontSize: "12px",
@@ -376,47 +377,47 @@ const styles = {
     marginBottom: "16px",
   },
   summaryPanel: {
-    background: "#0f172a",
+    background: theme.bg,
     border: "1px solid #334155",
     borderRadius: "10px",
     padding: "14px",
   },
-  summaryLabel: { color: "#94a3b8", fontSize: "12px", marginBottom: "6px" },
-  summaryValue: { color: "#f8fafc", fontSize: "16px", fontWeight: "700" },
-  summaryMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "4px", lineHeight: 1.5 },
+  summaryLabel: { color: theme.muted, fontSize: "12px", marginBottom: "6px" },
+  summaryValue: { color: theme.text, fontSize: "16px", fontWeight: "700" },
+  summaryMeta: { color: theme.muted, fontSize: "12px", marginTop: "4px", lineHeight: 1.5 },
   weekStrip: { display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "10px" },
   dayTile: {
-    background: "#0f172a",
+    background: theme.bg,
     border: "1px solid #334155",
     borderRadius: "10px",
     padding: "12px 10px",
     textAlign: "center",
   },
-  dayName: { color: "#94a3b8", fontSize: "12px", marginBottom: "8px" },
+  dayName: { color: theme.muted, fontSize: "12px", marginBottom: "8px" },
   dayDot: { width: "16px", height: "16px", borderRadius: "50%", margin: "0 auto 8px" },
   dayStatus: { color: "#e2e8f0", fontSize: "11px", textTransform: "capitalize" },
-  empty: { color: "#94a3b8", fontSize: "13px", margin: 0 },
+  empty: { color: theme.muted, fontSize: "13px", margin: 0 },
   todayRow: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
     gap: "16px",
   },
-  todayLabel: { color: "#64748b", fontSize: "12px", marginBottom: "4px" },
-  todayValue: { color: "#f8fafc", fontSize: "14px", fontWeight: "600" },
+  todayLabel: { color: theme.faint, fontSize: "12px", marginBottom: "4px" },
+  todayValue: { color: theme.text, fontSize: "14px", fontWeight: "600" },
   list: { display: "flex", flexDirection: "column", gap: "10px" },
   row: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "16px",
-    background: "#0f172a",
+    background: theme.bg,
     border: "1px solid #334155",
     borderRadius: "10px",
     padding: "12px",
   },
   rowMain: { flex: 1, minWidth: 0 },
-  rowTitle: { color: "#f8fafc", fontWeight: "700", fontSize: "14px" },
-  rowMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "3px" },
+  rowTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
+  rowMeta: { color: theme.muted, fontSize: "12px", marginTop: "3px" },
   statusPill: {
     padding: "4px 10px",
     borderRadius: "999px",

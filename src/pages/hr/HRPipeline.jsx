@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../../firebase";
 import Layout from "../../components/Layout";
+import { theme } from "../../theme";
 
 const stages = ["new", "screening", "interview", "offer", "onboarding", "rejected"];
 
@@ -96,24 +97,24 @@ export default function HRPipeline() {
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px", marginBottom: "24px" },
-  statCard: { background: "#1e293b", borderRadius: "12px", padding: "16px", textAlign: "center", border: "1px solid #334155" },
-  statValue: { color: "#f8fafc", fontSize: "22px", fontWeight: "700" },
-  statLabel: { color: "#94a3b8", fontSize: "12px", marginTop: "4px", textTransform: "capitalize" },
+  statCard: { background: theme.surface, borderRadius: "12px", padding: "16px", textAlign: "center", border: "1px solid #334155" },
+  statValue: { color: theme.text, fontSize: "22px", fontWeight: "700" },
+  statLabel: { color: theme.muted, fontSize: "12px", marginTop: "4px", textTransform: "capitalize" },
   board: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" },
-  column: { background: "#1e293b", border: "1px solid #334155", borderRadius: "14px", padding: "16px" },
+  column: { background: theme.surface, border: "1px solid #334155", borderRadius: "14px", padding: "16px" },
   columnHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },
-  columnTitle: { margin: 0, fontSize: "14px", fontWeight: "700", color: "#f8fafc", textTransform: "capitalize" },
-  columnCount: { color: "#94a3b8", fontSize: "12px" },
+  columnTitle: { margin: 0, fontSize: "14px", fontWeight: "700", color: theme.text, textTransform: "capitalize" },
+  columnCount: { color: theme.muted, fontSize: "12px" },
   columnList: { display: "flex", flexDirection: "column", gap: "10px" },
-  card: { background: "#0f172a", border: "1px solid #334155", borderRadius: "12px", padding: "12px" },
-  cardTitle: { color: "#f8fafc", fontWeight: "700", fontSize: "14px" },
-  cardMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "3px" },
+  card: { background: theme.bg, border: "1px solid #334155", borderRadius: "12px", padding: "12px" },
+  cardTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
+  cardMeta: { color: theme.muted, fontSize: "12px", marginTop: "3px" },
   cardTags: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px" },
-  tag: { padding: "4px 8px", borderRadius: "999px", background: "#334155", color: "#cbd5e1", fontSize: "11px" },
-  empty: { color: "#94a3b8", fontSize: "13px", margin: 0 },
+  tag: { padding: "4px 8px", borderRadius: "999px", background: theme.border, color: "#cbd5e1", fontSize: "11px" },
+  empty: { color: theme.muted, fontSize: "13px", margin: 0 },
 };

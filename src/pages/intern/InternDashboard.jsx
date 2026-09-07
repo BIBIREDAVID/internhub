@@ -3,6 +3,7 @@ import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/fire
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { theme } from "../../theme";
 
 export default function InternDashboard() {
   const { currentUser } = useAuth();
@@ -38,7 +39,7 @@ export default function InternDashboard() {
 
   if (loading) return (
     <Layout>
-      <div style={{ color: "#94a3b8", padding: "40px", textAlign: "center" }}>Loading your dashboard...</div>
+      <div style={{ color: theme.muted, padding: "40px", textAlign: "center" }}>Loading your dashboard...</div>
     </Layout>
   );
 
@@ -66,10 +67,10 @@ export default function InternDashboard() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Completed", value: completed, color: "#22c55e" },
-          { label: "In Progress", value: inProgress, color: "#3b82f6" },
-          { label: "Pending", value: pending, color: "#f59e0b" },
-          { label: "Total Tasks", value: tasks.length, color: "#a855f7" },
+          { label: "Completed", value: completed, color: theme.success },
+          { label: "In Progress", value: inProgress, color: theme.primary },
+          { label: "Pending", value: pending, color: theme.warning },
+          { label: "Total Tasks", value: tasks.length, color: theme.info },
         ].map((s) => (
           <div key={s.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: s.color }}>{s.value}</div>
@@ -89,8 +90,8 @@ export default function InternDashboard() {
                   <span style={styles.taskTitle}>{task.title}</span>
                   <span style={{
                     ...styles.badge,
-                    background: task.status === "completed" ? "#16a34a"
-                      : task.status === "in-progress" ? "#1d4ed8" : "#92400e",
+                    background: task.status === "completed" ? theme.successStrong
+                      : task.status === "in-progress" ? "#1d4ed8" : theme.warningSoft,
                   }}>
                     {task.status}
                   </span>
@@ -100,8 +101,8 @@ export default function InternDashboard() {
                   <span style={styles.taskMeta}>Due: {task.dueDate}</span>
                   <span style={{
                     ...styles.priorityDot,
-                    background: task.priority === "high" ? "#ef4444"
-                      : task.priority === "medium" ? "#f59e0b" : "#64748b",
+                    background: task.priority === "high" ? theme.danger
+                      : task.priority === "medium" ? theme.warning : theme.faint,
                   }} />
                   <span style={styles.taskMeta}>{task.priority} priority</span>
                 </div>
@@ -132,13 +133,13 @@ export default function InternDashboard() {
                   <div key={step} style={styles.step}>
                     <div style={{
                       ...styles.stepDot,
-                      background: done ? "#22c55e" : current ? "#3b82f6" : "#334155",
+                      background: done ? theme.success : current ? theme.primary : theme.border,
                     }}>
                       {done ? "✓" : i + 1}
                     </div>
                     <span style={{
                       ...styles.stepLabel,
-                      color: done ? "#22c55e" : current ? "#f1f5f9" : "#64748b",
+                      color: done ? theme.success : current ? "#f1f5f9" : theme.faint,
                     }}>
                       {step}
                     </span>
@@ -156,7 +157,7 @@ export default function InternDashboard() {
 const styles = {
   welcome: { marginBottom: "24px" },
   welcomeTitle: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  welcomeSub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  welcomeSub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   statsRow: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
@@ -164,21 +165,21 @@ const styles = {
     marginBottom: "24px",
   },
   statCard: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     textAlign: "center",
     border: "1px solid #334155",
   },
   statValue: { fontSize: "32px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
   grid: {
     display: "grid",
     gridTemplateColumns: "1fr 340px",
     gap: "16px",
   },
   card: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     border: "1px solid #334155",
@@ -187,7 +188,7 @@ const styles = {
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   taskList: { display: "flex", flexDirection: "column", gap: "12px" },
   taskItem: {
-    background: "#0f172a",
+    background: theme.bg,
     borderRadius: "8px",
     padding: "14px",
     border: "1px solid #334155",
@@ -206,16 +207,16 @@ const styles = {
     fontWeight: "600",
     color: "#fff",
   },
-  taskDesc: { color: "#64748b", fontSize: "13px", margin: "0 0 8px 0" },
+  taskDesc: { color: theme.faint, fontSize: "13px", margin: "0 0 8px 0" },
   taskBottom: { display: "flex", alignItems: "center", gap: "6px" },
   taskMeta: { color: "#475569", fontSize: "12px" },
   priorityDot: { width: "6px", height: "6px", borderRadius: "50%" },
   rightCol: { display: "flex", flexDirection: "column" },
   progressWrap: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" },
-  progressBar: { flex: 1, height: "8px", background: "#334155", borderRadius: "4px", overflow: "hidden" },
-  progressFill: { height: "100%", background: "#3b82f6", borderRadius: "4px", transition: "width 0.3s ease" },
-  progressPct: { color: "#3b82f6", fontWeight: "700", fontSize: "14px" },
-  progressSub: { color: "#64748b", fontSize: "13px", margin: 0 },
+  progressBar: { flex: 1, height: "8px", background: theme.border, borderRadius: "4px", overflow: "hidden" },
+  progressFill: { height: "100%", background: theme.primary, borderRadius: "4px", transition: "width 0.3s ease" },
+  progressPct: { color: theme.primary, fontWeight: "700", fontSize: "14px" },
+  progressSub: { color: theme.faint, fontSize: "13px", margin: 0 },
   stepList: { display: "flex", flexDirection: "column", gap: "12px" },
   step: { display: "flex", alignItems: "center", gap: "10px" },
   stepDot: {
@@ -224,5 +225,5 @@ const styles = {
     fontSize: "11px", fontWeight: "700", color: "#fff", flexShrink: 0,
   },
   stepLabel: { fontSize: "13px", fontWeight: "500" },
-  empty: { color: "#64748b", fontSize: "13px" },
+  empty: { color: theme.faint, fontSize: "13px" },
 };

@@ -4,6 +4,7 @@ import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { theme } from "../../theme";
 
 export default function ManagerDashboard() {
   const { currentUser } = useAuth();
@@ -79,7 +80,7 @@ export default function ManagerDashboard() {
 
   if (loading) return (
     <Layout>
-      <div style={{ color: "#94a3b8", padding: "40px", textAlign: "center" }}>Loading...</div>
+      <div style={{ color: theme.muted, padding: "40px", textAlign: "center" }}>Loading...</div>
     </Layout>
   );
 
@@ -100,10 +101,10 @@ export default function ManagerDashboard() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Total Interns", value: interns.length, color: "#3b82f6" },
-          { label: "Tasks Assigned", value: totalTasks, color: "#a855f7" },
-          { label: "Tasks Completed", value: completedTasks, color: "#22c55e" },
-          { label: "Completion Rate", value: totalTasks ? `${Math.round((completedTasks / totalTasks) * 100)}%` : "0%", color: "#f59e0b" },
+          { label: "Total Interns", value: interns.length, color: theme.primary },
+          { label: "Tasks Assigned", value: totalTasks, color: theme.info },
+          { label: "Tasks Completed", value: completedTasks, color: theme.success },
+          { label: "Completion Rate", value: totalTasks ? `${Math.round((completedTasks / totalTasks) * 100)}%` : "0%", color: theme.warning },
         ].map((s) => (
           <div key={s.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: s.color }}>{s.value}</div>
@@ -167,8 +168,8 @@ export default function ManagerDashboard() {
                       onChange={(e) => handleStatusChange(task.id, e.target.value)}
                       style={{
                         ...styles.statusSelect,
-                        background: task.status === "completed" ? "#16a34a"
-                          : task.status === "in-progress" ? "#1d4ed8" : "#92400e",
+                        background: task.status === "completed" ? theme.successStrong
+                          : task.status === "in-progress" ? "#1d4ed8" : theme.warningSoft,
                       }}
                     >
                       <option value="pending">pending</option>
@@ -267,9 +268,9 @@ export default function ManagerDashboard() {
 const styles = {
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   primaryBtn: {
-    padding: "10px 20px", background: "#3b82f6", color: "#fff",
+    padding: "10px 20px", background: theme.primary, color: "#fff",
     border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "14px",
   },
   statsRow: {
@@ -277,66 +278,66 @@ const styles = {
     gap: "16px", marginBottom: "24px",
   },
   statCard: {
-    background: "#1e293b", borderRadius: "12px", padding: "20px",
+    background: theme.surface, borderRadius: "12px", padding: "20px",
     textAlign: "center", border: "1px solid #334155",
   },
   statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" },
-  card: { background: "#1e293b", borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
+  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   internCard: {
-    background: "#0f172a", borderRadius: "8px", padding: "14px",
+    background: theme.bg, borderRadius: "8px", padding: "14px",
     border: "1px solid #334155", marginBottom: "12px",
   },
   internTop: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" },
   internAvatar: {
-    width: "36px", height: "36px", borderRadius: "50%", background: "#3b82f6",
+    width: "36px", height: "36px", borderRadius: "50%", background: theme.primary,
     display: "flex", alignItems: "center", justifyContent: "center",
     fontWeight: "700", fontSize: "14px", color: "#fff", flexShrink: 0,
   },
   internInfo: { flex: 1 },
   internName: { fontWeight: "600", fontSize: "14px", color: "#f1f5f9" },
-  internMeta: { color: "#64748b", fontSize: "12px", marginTop: "2px" },
+  internMeta: { color: theme.faint, fontSize: "12px", marginTop: "2px" },
   assignBtn: {
     padding: "6px 12px", background: "transparent", border: "1px solid #334155",
-    color: "#94a3b8", borderRadius: "6px", cursor: "pointer", fontSize: "12px",
+    color: theme.muted, borderRadius: "6px", cursor: "pointer", fontSize: "12px",
   },
   progressWrap: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" },
-  progressBar: { flex: 1, height: "6px", background: "#334155", borderRadius: "3px", overflow: "hidden" },
-  progressFill: { height: "100%", background: "#3b82f6", borderRadius: "3px" },
-  progressPct: { color: "#3b82f6", fontWeight: "700", fontSize: "12px" },
+  progressBar: { flex: 1, height: "6px", background: theme.border, borderRadius: "3px", overflow: "hidden" },
+  progressFill: { height: "100%", background: theme.primary, borderRadius: "3px" },
+  progressPct: { color: theme.primary, fontWeight: "700", fontSize: "12px" },
   internStats: { display: "flex", gap: "12px" },
-  internStat: { color: "#64748b", fontSize: "12px" },
+  internStat: { color: theme.faint, fontSize: "12px" },
   taskList: { display: "flex", flexDirection: "column", gap: "10px" },
-  taskItem: { background: "#0f172a", borderRadius: "8px", padding: "12px", border: "1px solid #334155" },
+  taskItem: { background: theme.bg, borderRadius: "8px", padding: "12px", border: "1px solid #334155" },
   taskTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" },
   taskTitle: { fontWeight: "600", fontSize: "13px", color: "#f1f5f9" },
   statusSelect: {
     padding: "2px 8px", borderRadius: "20px", border: "none",
     color: "#fff", fontSize: "11px", fontWeight: "600", cursor: "pointer",
   },
-  taskMeta: { color: "#64748b", fontSize: "12px" },
-  empty: { color: "#64748b", fontSize: "13px" },
+  taskMeta: { color: theme.faint, fontSize: "12px" },
+  empty: { color: theme.faint, fontSize: "13px" },
   modalOverlay: {
     position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
     display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50,
   },
   modal: {
-    background: "#1e293b", borderRadius: "16px", padding: "28px",
+    background: theme.surface, borderRadius: "16px", padding: "28px",
     width: "100%", maxWidth: "460px", border: "1px solid #334155",
   },
   modalTitle: { fontSize: "17px", fontWeight: "700", margin: "0 0 20px 0", color: "#f1f5f9" },
   field: { marginBottom: "14px" },
-  label: { display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px", fontWeight: "500" },
+  label: { display: "block", color: theme.muted, fontSize: "13px", marginBottom: "6px", fontWeight: "500" },
   input: {
-    width: "100%", padding: "10px 12px", background: "#0f172a",
+    width: "100%", padding: "10px 12px", background: theme.bg,
     border: "1px solid #334155", borderRadius: "8px", color: "#f1f5f9",
     fontSize: "14px", boxSizing: "border-box",
   },
   modalBtns: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" },
   cancelBtn: {
     padding: "10px 20px", background: "transparent", border: "1px solid #334155",
-    color: "#94a3b8", borderRadius: "8px", cursor: "pointer", fontSize: "14px",
+    color: theme.muted, borderRadius: "8px", cursor: "pointer", fontSize: "14px",
   },
 };

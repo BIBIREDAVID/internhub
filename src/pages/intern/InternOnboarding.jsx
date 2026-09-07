@@ -4,6 +4,7 @@ import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { theme } from "../../theme";
 
 const onboardingSteps = [
   { id: "account_setup", label: "Account Setup", description: "Confirm your access details and contact info." },
@@ -181,7 +182,7 @@ export default function InternOnboarding() {
               <div
                 style={{
                   ...styles.stepDot,
-                  background: step.completed ? "#22c55e" : step.current ? "#3b82f6" : "#334155",
+                  background: step.completed ? theme.success : step.current ? theme.primary : theme.border,
                 }}
               >
                 {step.completed ? "✓" : step.number}
@@ -190,7 +191,7 @@ export default function InternOnboarding() {
                 <div
                   style={{
                     ...styles.stepLabel,
-                    color: step.completed ? "#22c55e" : step.current ? "#f8fafc" : "#94a3b8",
+                    color: step.completed ? theme.success : step.current ? theme.text : theme.muted,
                   }}
                 >
                   {step.label}
@@ -231,14 +232,14 @@ export default function InternOnboarding() {
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   actions: { display: "flex", gap: "10px", flexWrap: "wrap" },
   primaryBtn: {
     padding: "10px 16px",
-    background: "#3b82f6",
+    background: theme.primary,
     color: "#fff",
     border: "none",
     borderRadius: "8px",
@@ -247,7 +248,7 @@ const styles = {
   },
   secondaryBtn: {
     padding: "10px 16px",
-    background: "#1e293b",
+    background: theme.surface,
     color: "#e2e8f0",
     border: "1px solid #334155",
     borderRadius: "8px",
@@ -255,13 +256,13 @@ const styles = {
     fontWeight: "600",
   },
   card: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     border: "1px solid #334155",
     marginBottom: "16px",
   },
-  cardTitle: { fontSize: "15px", fontWeight: "700", margin: 0, color: "#f8fafc" },
+  cardTitle: { fontSize: "15px", fontWeight: "700", margin: 0, color: theme.text },
   progressHeader: {
     display: "flex",
     justifyContent: "space-between",
@@ -269,10 +270,10 @@ const styles = {
     gap: "16px",
     marginBottom: "14px",
   },
-  progressMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "4px" },
-  progressPct: { color: "#3b82f6", fontSize: "18px", fontWeight: "700" },
-  progressBar: { height: "10px", background: "#334155", borderRadius: "999px", overflow: "hidden" },
-  progressFill: { height: "100%", background: "#3b82f6", borderRadius: "999px" },
+  progressMeta: { color: theme.muted, fontSize: "12px", marginTop: "4px" },
+  progressPct: { color: theme.primary, fontSize: "18px", fontWeight: "700" },
+  progressBar: { height: "10px", background: theme.border, borderRadius: "999px", overflow: "hidden" },
+  progressFill: { height: "100%", background: theme.primary, borderRadius: "999px" },
   stepList: { display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px" },
   stepButton: {
     display: "flex",
@@ -281,7 +282,7 @@ const styles = {
     width: "100%",
     border: "1px solid #334155",
     borderRadius: "12px",
-    background: "#0f172a",
+    background: theme.bg,
     padding: "12px",
     textAlign: "left",
     cursor: "pointer",
@@ -300,14 +301,14 @@ const styles = {
   },
   stepContent: { flex: 1 },
   stepLabel: { fontSize: "14px", fontWeight: "600" },
-  stepDescription: { color: "#64748b", fontSize: "12px", marginTop: "2px", lineHeight: 1.5 },
-  stepMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "3px" },
+  stepDescription: { color: theme.faint, fontSize: "12px", marginTop: "2px", lineHeight: 1.5 },
+  stepMeta: { color: theme.muted, fontSize: "12px", marginTop: "3px" },
   detailsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     gap: "16px",
     marginTop: "16px",
   },
-  detailLabel: { color: "#94a3b8", fontSize: "12px", marginBottom: "4px" },
-  detailValue: { color: "#f8fafc", fontSize: "14px", fontWeight: "600" },
+  detailLabel: { color: theme.muted, fontSize: "12px", marginBottom: "4px" },
+  detailValue: { color: theme.text, fontSize: "14px", fontWeight: "600" },
 };

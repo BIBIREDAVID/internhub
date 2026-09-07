@@ -4,6 +4,7 @@ import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { theme } from "../../theme";
 
 const filterOptions = [
   { label: "All", value: "all" },
@@ -104,10 +105,10 @@ export default function InternTasks() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Completed", value: completed, color: "#22c55e" },
-          { label: "In Progress", value: inProgress, color: "#3b82f6" },
-          { label: "Pending", value: pending, color: "#f59e0b" },
-          { label: "Completion Rate", value: `${completionRate}%`, color: "#a855f7" },
+          { label: "Completed", value: completed, color: theme.success },
+          { label: "In Progress", value: inProgress, color: theme.primary },
+          { label: "Pending", value: pending, color: theme.warning },
+          { label: "Completion Rate", value: `${completionRate}%`, color: theme.info },
         ].map((stat) => (
           <div key={stat.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
@@ -125,9 +126,9 @@ export default function InternTasks() {
               onClick={() => setFilter(option.value)}
               style={{
                 ...styles.filterBtn,
-                background: active ? "#3b82f6" : "#1e293b",
-                color: active ? "#fff" : "#94a3b8",
-                borderColor: active ? "#3b82f6" : "#334155",
+                background: active ? theme.primary : theme.surface,
+                color: active ? "#fff" : theme.muted,
+                borderColor: active ? theme.primary : theme.border,
               }}
             >
               {option.label}
@@ -155,10 +156,10 @@ export default function InternTasks() {
                       ...styles.statusSelect,
                       background:
                         task.status === "completed"
-                          ? "#166534"
+                          ? theme.successSoft
                           : task.status === "in-progress"
                             ? "#1d4ed8"
-                            : "#92400e",
+                            : theme.warningSoft,
                     }}
                   >
                     <option value="pending">pending</option>
@@ -182,10 +183,10 @@ export default function InternTasks() {
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   statsRow: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
@@ -193,14 +194,14 @@ const styles = {
     marginBottom: "24px",
   },
   statCard: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     textAlign: "center",
     border: "1px solid #334155",
   },
   statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
   toolbar: {
     display: "flex",
     flexWrap: "wrap",
@@ -215,14 +216,14 @@ const styles = {
     cursor: "pointer",
   },
   card: {
-    background: "#1e293b",
+    background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
     border: "1px solid #334155",
   },
   list: { display: "flex", flexDirection: "column", gap: "12px" },
   taskItem: {
-    background: "#0f172a",
+    background: theme.bg,
     borderRadius: "10px",
     padding: "14px",
     border: "1px solid #334155",
@@ -233,8 +234,8 @@ const styles = {
     justifyContent: "space-between",
     gap: "16px",
   },
-  taskTitle: { fontWeight: "700", fontSize: "14px", color: "#f8fafc" },
-  taskMeta: { color: "#94a3b8", fontSize: "13px", marginTop: "4px", lineHeight: 1.5 },
+  taskTitle: { fontWeight: "700", fontSize: "14px", color: theme.text },
+  taskMeta: { color: theme.muted, fontSize: "13px", marginTop: "4px", lineHeight: 1.5 },
   statusSelect: {
     border: "none",
     color: "#fff",
@@ -247,9 +248,9 @@ const styles = {
   metaPill: {
     padding: "4px 10px",
     borderRadius: "999px",
-    background: "#334155",
+    background: theme.border,
     color: "#cbd5e1",
     fontSize: "11px",
   },
-  empty: { color: "#94a3b8", fontSize: "13px", margin: 0 },
+  empty: { color: theme.muted, fontSize: "13px", margin: 0 },
 };

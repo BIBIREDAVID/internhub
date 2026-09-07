@@ -4,6 +4,7 @@ import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { theme } from "../../theme";
 
 const emptyTask = {
   title: "",
@@ -166,10 +167,10 @@ export default function ManagerTasks() {
 
       <div style={styles.statsRow}>
         {[
-          { label: "Total Tasks", value: tasks.length, color: "#3b82f6" },
-          { label: "In Progress", value: inProgress, color: "#f59e0b" },
-          { label: "Completed", value: completed, color: "#22c55e" },
-          { label: "Open", value: tasks.length - completed, color: "#a855f7" },
+          { label: "Total Tasks", value: tasks.length, color: theme.primary },
+          { label: "In Progress", value: inProgress, color: theme.warning },
+          { label: "Completed", value: completed, color: theme.success },
+          { label: "Open", value: tasks.length - completed, color: theme.info },
         ].map((stat) => (
           <div key={stat.label} style={styles.statCard}>
             <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
@@ -185,9 +186,9 @@ export default function ManagerTasks() {
             onClick={() => setFilter(value)}
             style={{
               ...styles.filterBtn,
-              background: filter === value ? "#3b82f6" : "#1e293b",
-              color: filter === value ? "#fff" : "#94a3b8",
-              borderColor: filter === value ? "#3b82f6" : "#334155",
+              background: filter === value ? theme.primary : theme.surface,
+              color: filter === value ? "#fff" : theme.muted,
+              borderColor: filter === value ? theme.primary : theme.border,
             }}
           >
             {value}
@@ -219,10 +220,10 @@ export default function ManagerTasks() {
                         ...styles.statusSelect,
                         background:
                           task.status === "completed"
-                            ? "#166534"
+                            ? theme.successSoft
                             : task.status === "in-progress"
                               ? "#1d4ed8"
-                              : "#92400e",
+                              : theme.warningSoft,
                       }}
                     >
                       <option value="pending">pending</option>
@@ -302,37 +303,37 @@ export default function ManagerTasks() {
 }
 
 const styles = {
-  loading: { color: "#94a3b8", padding: "40px", textAlign: "center" },
+  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
-  sub: { color: "#64748b", fontSize: "13px", marginTop: "4px" },
-  primaryBtn: { padding: "10px 20px", background: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
+  sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
+  primaryBtn: { padding: "10px 20px", background: theme.primary, color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
   statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "16px", marginBottom: "24px" },
-  statCard: { background: "#1e293b", borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
+  statCard: { background: theme.surface, borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
   statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: "#64748b", fontSize: "13px" },
+  statLabel: { color: theme.faint, fontSize: "13px" },
   toolbar: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" },
   filterBtn: { borderRadius: "999px", border: "1px solid", padding: "8px 14px", fontSize: "13px", cursor: "pointer" },
-  card: { background: "#1e293b", borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
+  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   taskList: { display: "flex", flexDirection: "column", gap: "12px" },
-  taskCard: { background: "#0f172a", border: "1px solid #334155", borderRadius: "12px", padding: "14px" },
+  taskCard: { background: theme.bg, border: "1px solid #334155", borderRadius: "12px", padding: "14px" },
   taskTop: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" },
-  taskTitle: { color: "#f8fafc", fontWeight: "700", fontSize: "14px" },
-  taskMeta: { color: "#94a3b8", fontSize: "12px", marginTop: "4px" },
+  taskTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
+  taskMeta: { color: theme.muted, fontSize: "12px", marginTop: "4px" },
   taskDesc: { color: "#cbd5e1", fontSize: "13px", marginTop: "10px", lineHeight: 1.5 },
   statusSelect: { border: "none", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "11px", fontWeight: "700" },
   taskActions: { display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" },
-  actionBtn: { padding: "7px 10px", background: "#1e293b", color: "#e2e8f0", border: "1px solid #334155", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  actionBtn: { padding: "7px 10px", background: theme.surface, color: "#e2e8f0", border: "1px solid #334155", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
   dangerBtn: { padding: "7px 10px", background: "#7f1d1d", color: "#fff", border: "1px solid #b91c1c", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
-  empty: { color: "#94a3b8", fontSize: "13px", margin: 0 },
+  empty: { color: theme.muted, fontSize: "13px", margin: 0 },
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 },
-  modal: { background: "#1e293b", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "520px", border: "1px solid #334155" },
+  modal: { background: theme.surface, borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "520px", border: "1px solid #334155" },
   modalTitle: { fontSize: "17px", fontWeight: "700", margin: "0 0 20px 0", color: "#f1f5f9" },
   field: { marginBottom: "14px" },
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
-  label: { display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px", fontWeight: "500" },
-  input: { width: "100%", padding: "10px 12px", background: "#0f172a", border: "1px solid #334155", borderRadius: "8px", color: "#f1f5f9", fontSize: "14px", boxSizing: "border-box" },
+  label: { display: "block", color: theme.muted, fontSize: "13px", marginBottom: "6px", fontWeight: "500" },
+  input: { width: "100%", padding: "10px 12px", background: theme.bg, border: "1px solid #334155", borderRadius: "8px", color: "#f1f5f9", fontSize: "14px", boxSizing: "border-box" },
   modalBtns: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" },
-  cancelBtn: { padding: "10px 20px", background: "transparent", border: "1px solid #334155", color: "#94a3b8", borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
+  cancelBtn: { padding: "10px 20px", background: "transparent", border: "1px solid #334155", color: theme.muted, borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
 };

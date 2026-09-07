@@ -6,6 +6,7 @@ import HRPipeline from "./pages/hr/HRPipeline";
 import HRInterns from "./pages/hr/HRInterns";
 import HROnboarding from "./pages/hr/HROnboarding";
 import HRAttendance from "./pages/hr/HRAttendance";
+import HRReports from "./pages/hr/HRReports";
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerInterns from "./pages/manager/ManagerInterns";
 import ManagerTasks from "./pages/manager/ManagerTasks";
@@ -15,16 +16,6 @@ import InternTasks from "./pages/intern/InternTasks";
 import InternAttendance from "./pages/intern/InternAttendance";
 import InternOnboarding from "./pages/intern/InternOnboarding";
 import ProtectedRoute from "./components/ProtectedRoute";
-import SectionPlaceholder from "./components/SectionPlaceholder";
-
-const placeholderRoutes = [
-  {
-    role: "hr",
-    routes: [
-      { path: "/hr/reports", title: "Reports", description: "Generate HR reports and export team insights." },
-    ],
-  },
-];
 
 export default function App() {
   return (
@@ -99,19 +90,11 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        {placeholderRoutes.flatMap(({ role, routes }) => (
-          routes.map(({ path, title, description }) => (
-            <Route
-              key={path}
-              path={path}
-              element={
-                <ProtectedRoute allowedRoles={[role]}>
-                  <SectionPlaceholder title={title} description={description} />
-                </ProtectedRoute>
-              }
-            />
-          ))
-        ))}
+        <Route path="/hr/reports" element={
+          <ProtectedRoute allowedRoles={["hr"]}>
+            <HRReports />
+          </ProtectedRoute>
+        } />
 
         <Route
           path="/intern/tasks"
