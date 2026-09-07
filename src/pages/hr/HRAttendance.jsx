@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../../firebase";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 function displayTime(isoString) {
   if (!isoString) return "—";
@@ -17,14 +18,29 @@ export default function HRAttendance() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const unsubAttendance = onSnapshot(query(collection(db, "attendance")), (snapshot) => {
-      setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      setLoading(false);
-    });
+    const unsubAttendance = onSnapshot(
+      query(collection(db, "attendance")),
+      (snapshot) => {
+        setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Attendance load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load attendance."));
+        setLoading(false);
+      }
+    );
 
-    const unsubUsers = onSnapshot(query(collection(db, "users")), (snapshot) => {
-      setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-    });
+    const unsubUsers = onSnapshot(
+      query(collection(db, "users")),
+      (snapshot) => {
+        setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+      },
+      (error) => {
+        console.error("Users load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load user data."));
+      }
+    );
 
     return () => {
       unsubAttendance();

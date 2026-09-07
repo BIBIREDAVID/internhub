@@ -2,32 +2,39 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, doc, onSnapshot, query, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 export default function HRInterns() {
   const [users, setUsers] = useState([]);
-  const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(query(collection(db, "users")), (snapshot) => {
-      setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      setLoading(false);
-    });
+    const unsubUsers = onSnapshot(
+      query(collection(db, "users")),
+      (snapshot) => {
+        setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Users load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load interns."));
+        setLoading(false);
+      }
+    );
 
-    const unsubManagers = onSnapshot(query(collection(db, "users")), (snapshot) => {
-      setManagers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })).filter((user) => user.role === "manager"));
-    });
-
-    return () => {
-      unsubUsers();
-      unsubManagers();
-    };
+    return unsubUsers;
   }, []);
 
   const interns = useMemo(() => users.filter((user) => user.role === "intern"), [users]);
+  const managers = useMemo(() => users.filter((user) => user.role === "manager"), [users]);
 
   async function assignManager(internId, managerId) {
-    await updateDoc(doc(db, "users", internId), { managerId });
+    try {
+      await updateDoc(doc(db, "users", internId), { managerId });
+    } catch (error) {
+      console.error("Assign manager error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't assign manager. Please try again."));
+    }
   }
 
   if (loading) {

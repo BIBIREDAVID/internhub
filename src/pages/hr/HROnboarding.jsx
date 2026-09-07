@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../../firebase";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 const steps = ["Setup", "Offer", "Manager Intro", "Orientation", "First Task"];
 
@@ -10,10 +11,18 @@ export default function HROnboarding() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(query(collection(db, "users")), (snapshot) => {
-      setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      query(collection(db, "users")),
+      (snapshot) => {
+        setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Users load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load onboarding data."));
+        setLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, []);

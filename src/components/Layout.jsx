@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
+import Toaster from "./Toaster";
 
 const navItems = {
   hr: [
@@ -167,6 +168,8 @@ export default function Layout({ children, topbarActions, pageTitle }) {
           {children}
         </div>
       </div>
+
+      <Toaster />
     </div>
   );
 }

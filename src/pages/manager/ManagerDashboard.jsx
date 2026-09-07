@@ -3,6 +3,7 @@ import { collection, query, where, onSnapshot, addDoc, updateDoc, doc } from "fi
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 export default function ManagerDashboard() {
   const { currentUser } = useAuth();
@@ -50,20 +51,30 @@ export default function ManagerDashboard() {
   async function handleAssignTask(e) {
     e.preventDefault();
     if (!selectedIntern) return;
-    await addDoc(collection(db, "tasks"), {
-      ...newTask,
-      internId: selectedIntern.id,
-      managerId: currentUser.uid,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    });
-    setNewTask({ title: "", description: "", dueDate: "", priority: "medium" });
-    setShowTaskForm(false);
-    setSelectedIntern(null);
+    try {
+      await addDoc(collection(db, "tasks"), {
+        ...newTask,
+        internId: selectedIntern.id,
+        managerId: currentUser.uid,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      });
+      setNewTask({ title: "", description: "", dueDate: "", priority: "medium" });
+      setShowTaskForm(false);
+      setSelectedIntern(null);
+    } catch (error) {
+      console.error("Assign task error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't assign the task. Please try again."));
+    }
   }
 
   async function handleStatusChange(taskId, newStatus) {
-    await updateDoc(doc(db, "tasks", taskId), { status: newStatus });
+    try {
+      await updateDoc(doc(db, "tasks", taskId), { status: newStatus });
+    } catch (error) {
+      console.error("Update task status error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't update the task. Please try again."));
+    }
   }
 
   if (loading) return (

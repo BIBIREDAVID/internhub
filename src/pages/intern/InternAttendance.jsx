@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, query, setDoc, where } from "firebase/fire
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -34,15 +35,30 @@ export default function InternAttendance() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const profileUnsub = onSnapshot(doc(db, "users", currentUser.uid), (snapshot) => {
-      setProfile(snapshot.exists() ? snapshot.data() : null);
-      setLoading(false);
-    });
+    const profileUnsub = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (snapshot) => {
+        setProfile(snapshot.exists() ? snapshot.data() : null);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Profile load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load your profile."));
+        setLoading(false);
+      }
+    );
 
     const attendanceQuery = query(collection(db, "attendance"), where("internId", "==", currentUser.uid));
-    const recordsUnsub = onSnapshot(attendanceQuery, (snapshot) => {
-      setRecords(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-    });
+    const recordsUnsub = onSnapshot(
+      attendanceQuery,
+      (snapshot) => {
+        setRecords(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+      },
+      (error) => {
+        console.error("Attendance load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load attendance records."));
+      }
+    );
 
     return () => {
       profileUnsub();
@@ -116,6 +132,9 @@ export default function InternAttendance() {
         checkOut: todaysRecord?.checkOut || null,
         note: todaysRecord?.note || "",
       }, { merge: true });
+    } catch (error) {
+      console.error("Check-in error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't check in. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -132,6 +151,9 @@ export default function InternAttendance() {
         checkOut: new Date().toISOString(),
         note: todaysRecord?.note || "",
       }, { merge: true });
+    } catch (error) {
+      console.error("Check-out error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't check out. Please try again."));
     } finally {
       setSaving(false);
     }

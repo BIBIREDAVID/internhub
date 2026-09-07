@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, query, addDoc, updateDoc, deleteDoc, where
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 const emptyTask = {
   title: "",
@@ -29,14 +30,29 @@ export default function ManagerTasks() {
     const internsQuery = query(collection(db, "users"), where("managerId", "==", currentUser.uid));
     const tasksQuery = query(collection(db, "tasks"), where("managerId", "==", currentUser.uid));
 
-    const unsubInterns = onSnapshot(internsQuery, (snapshot) => {
-      setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      setLoading(false);
-    });
+    const unsubInterns = onSnapshot(
+      internsQuery,
+      (snapshot) => {
+        setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Interns load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load your interns."));
+        setLoading(false);
+      }
+    );
 
-    const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
-      setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-    });
+    const unsubTasks = onSnapshot(
+      tasksQuery,
+      (snapshot) => {
+        setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+      },
+      (error) => {
+        console.error("Tasks load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
+      }
+    );
 
     return () => {
       unsubInterns();
@@ -69,6 +85,15 @@ export default function ManagerTasks() {
   }
 
   async function saveTask() {
+    if (!form.title.trim()) {
+      notifyError("Task title is required.");
+      return;
+    }
+    if (!selectedInternId) {
+      notifyError("Select an intern to assign this task to.");
+      return;
+    }
+
     const payload = {
       title: form.title,
       description: form.description,
@@ -80,27 +105,42 @@ export default function ManagerTasks() {
       updatedAt: new Date().toISOString(),
     };
 
-    if (editingTask) {
-      await updateDoc(doc(db, "tasks", editingTask.id), payload);
-    } else {
-      await addDoc(collection(db, "tasks"), {
-        ...payload,
-        createdAt: new Date().toISOString(),
-      });
-    }
+    try {
+      if (editingTask) {
+        await updateDoc(doc(db, "tasks", editingTask.id), payload);
+      } else {
+        await addDoc(collection(db, "tasks"), {
+          ...payload,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
-    setShowModal(false);
-    setEditingTask(null);
-    setSelectedInternId("");
-    setForm(emptyTask);
+      setShowModal(false);
+      setEditingTask(null);
+      setSelectedInternId("");
+      setForm(emptyTask);
+    } catch (error) {
+      console.error("Save task error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't save the task. Please try again."));
+    }
   }
 
   async function changeStatus(taskId, status) {
-    await updateDoc(doc(db, "tasks", taskId), { status, updatedAt: new Date().toISOString() });
+    try {
+      await updateDoc(doc(db, "tasks", taskId), { status, updatedAt: new Date().toISOString() });
+    } catch (error) {
+      console.error("Update task status error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't update the task. Please try again."));
+    }
   }
 
   async function removeTask(taskId) {
-    await deleteDoc(doc(db, "tasks", taskId));
+    try {
+      await deleteDoc(doc(db, "tasks", taskId));
+    } catch (error) {
+      console.error("Delete task error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't delete the task. Please try again."));
+    }
   }
 
   const completed = tasks.filter((task) => task.status === "completed").length;

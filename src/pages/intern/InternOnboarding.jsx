@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 const onboardingSteps = [
   { id: "account_setup", label: "Account Setup", description: "Confirm your access details and contact info." },
@@ -21,10 +22,18 @@ export default function InternOnboarding() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (snapshot) => {
-      setProfile(snapshot.exists() ? snapshot.data() : null);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (snapshot) => {
+        setProfile(snapshot.exists() ? snapshot.data() : null);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Profile load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load your onboarding profile."));
+        setLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, [currentUser]);
@@ -72,6 +81,9 @@ export default function InternOnboarding() {
         onboardingChecklist: nextChecklist,
         onboardingStep: nextChecklist.filter((item) => item.completed).length,
       }, { merge: true });
+    } catch (error) {
+      console.error("Onboarding save error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't save your progress. Please try again."));
     } finally {
       setSaving(false);
     }

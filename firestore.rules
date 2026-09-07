@@ -1,0 +1,106 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function role() {
+      return isSignedIn() && userDoc(request.auth.uid).data.role;
+    }
+
+    function isHR() {
+      return isSignedIn() && role() == "hr";
+    }
+
+    function isManager() {
+      return isSignedIn() && role() == "manager";
+    }
+
+    function isIntern() {
+      return isSignedIn() && role() == "intern";
+    }
+
+    function managesIntern(internId) {
+      return isManager() && userDoc(internId).data.managerId == request.auth.uid;
+    }
+
+    // ---- users ----
+    // Each doc: { role: "hr"|"manager"|"intern", managerId?, name, email, onboardingChecklist?, onboardingStep? }
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isHR() ||
+        managesIntern(userId)
+      );
+
+      // HR provisions/edits any user. Interns may only edit their own
+      // onboarding progress, never their own role or manager assignment.
+      allow create, delete: if isHR();
+
+      allow update: if isHR() || (
+        isSignedIn() && request.auth.uid == userId &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.managerId == resource.data.managerId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["onboardingChecklist", "onboardingStep"])
+      );
+    }
+
+    // ---- tasks ----
+    // Each doc: { title, description, dueDate, priority, status, internId, managerId, createdAt, updatedAt }
+    match /tasks/{taskId} {
+      allow read: if isHR() ||
+        (isManager() && resource.data.managerId == request.auth.uid) ||
+        (isIntern() && resource.data.internId == request.auth.uid);
+
+      allow create: if isHR() ||
+        (isManager() &&
+          request.resource.data.managerId == request.auth.uid &&
+          managesIntern(request.resource.data.internId));
+
+      allow update: if isHR() ||
+        (isManager() && resource.data.managerId == request.auth.uid) ||
+        (isIntern() && resource.data.internId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]));
+
+      allow delete: if isHR() || (isManager() && resource.data.managerId == request.auth.uid);
+    }
+
+    // ---- attendance ----
+    // Doc id: {internId}_{yyyy-mm-dd}. Fields: internId, date, status, checkIn, checkOut, note, managerComment
+    match /attendance/{recordId} {
+      allow read: if isHR() ||
+        (isIntern() && resource.data.internId == request.auth.uid) ||
+        managesIntern(resource.data.internId);
+
+      allow create: if isHR() ||
+        (isIntern() &&
+          request.resource.data.internId == request.auth.uid &&
+          recordId == request.auth.uid + "_" + request.resource.data.date);
+
+      allow update: if isHR() ||
+        (isIntern() &&
+          resource.data.internId == request.auth.uid &&
+          request.resource.data.internId == resource.data.internId &&
+          request.resource.data.date == resource.data.date) ||
+        (managesIntern(resource.data.internId) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["status", "managerComment", "managerCommentUpdatedAt", "reviewedByManagerAt"]));
+
+      allow delete: if isHR();
+    }
+
+    // ---- applications ----
+    // HR-managed recruitment pipeline. No public write path from this app.
+    match /applications/{applicationId} {
+      allow read, write: if isHR();
+    }
+  }
+}

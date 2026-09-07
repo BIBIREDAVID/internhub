@@ -4,27 +4,27 @@ This is the prioritized list of work needed to turn the app into a more complete
 
 ## P0 — Must Fix
 
-- [ ] Define the Firestore data model for `users`, `tasks`, `attendance`, and `applications`
-  - Decide required fields, optional fields, and ownership rules for each role.
-- [ ] Add Firestore security rules
-  - Lock reads/writes by role so HR, managers, and interns only access what they should.
+- [x] Define the Firestore data model for `users`, `tasks`, `attendance`, and `applications`
+  - Documented in `README.md` (fields, ownership, who can write what).
+- [x] Add Firestore security rules
+  - Added `firestore.rules` (+ `firebase.json`, `firestore.indexes.json`). **Not deployed automatically — see README "Deploying Firestore security rules". Until deployed, the app has no real access control.**
 - [ ] Replace the remaining placeholder `Reports` screen
   - Build a real HR reports page or remove the nav item until it exists.
-- [ ] Add shared error handling for Firestore writes
-  - Show user-friendly messages for failed saves, permission errors, and missing data.
+- [x] Add shared error handling for Firestore writes
+  - Added `src/utils/toast.js` + `src/components/Toaster.jsx`; wired into every Firestore write and read listener across HR/Manager/Intern pages.
 
 ## P1 — High Priority
 
 - [ ] Extract shared theme tokens
   - Move repeated colors, spacing, and card styles into one shared theme file.
 - [ ] Add validation to all forms
-  - Require important fields, prevent invalid dates, and block incomplete submissions.
-- [ ] Add empty states and retry states
-  - Make each page graceful when there is no data or the network fails.
+  - Manager task form now requires a title and an assigned intern; other forms still need review.
+- [x] Add empty states and retry states
+  - Firestore listeners now surface load failures via toast instead of failing silently.
 - [ ] Add pagination or collection limits
   - Avoid loading entire collections at once on large datasets.
-- [ ] Document setup in `README.md`
-  - Include env vars, role setup, Firestore structure, and seed data instructions.
+- [x] Document setup in `README.md`
+  - Env vars, Firestore data model, rules deployment, and known gaps documented.
 
 ## P2 — Important Polish
 

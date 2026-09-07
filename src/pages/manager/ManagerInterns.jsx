@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 export default function ManagerInterns() {
   const { currentUser } = useAuth();
@@ -19,18 +20,40 @@ export default function ManagerInterns() {
     const internsQuery = query(collection(db, "users"), where("managerId", "==", currentUser.uid));
     const tasksQuery = query(collection(db, "tasks"), where("managerId", "==", currentUser.uid));
 
-    const unsubInterns = onSnapshot(internsQuery, (snapshot) => {
-      setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      setLoading(false);
-    });
+    const unsubInterns = onSnapshot(
+      internsQuery,
+      (snapshot) => {
+        setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Interns load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load your interns."));
+        setLoading(false);
+      }
+    );
 
-    const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
-      setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-    });
+    const unsubTasks = onSnapshot(
+      tasksQuery,
+      (snapshot) => {
+        setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+      },
+      (error) => {
+        console.error("Tasks load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
+      }
+    );
 
-    const unsubAttendance = onSnapshot(collection(db, "attendance"), (snapshot) => {
-      setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-    });
+    const unsubAttendance = onSnapshot(
+      collection(db, "attendance"),
+      (snapshot) => {
+        setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+      },
+      (error) => {
+        console.error("Attendance load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load attendance."));
+      }
+    );
 
     return () => {
       unsubInterns();

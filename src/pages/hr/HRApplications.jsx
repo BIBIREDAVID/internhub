@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, query, updateDoc } from "firebase/firestor
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 const statuses = ["all", "new", "shortlisted", "rejected", "hired"];
 
@@ -38,11 +39,16 @@ export default function HRApplications() {
   );
 
   async function updateApplication(applicationId, nextStatus) {
-    await updateDoc(doc(db, "applications", applicationId), {
-      status: nextStatus,
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: currentUser.uid,
-    });
+    try {
+      await updateDoc(doc(db, "applications", applicationId), {
+        status: nextStatus,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: currentUser.uid,
+      });
+    } catch (error) {
+      console.error("Update application error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't update the application. Please try again."));
+    }
   }
 
   const counts = useMemo(() => {

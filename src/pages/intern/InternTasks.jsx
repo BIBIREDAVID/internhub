@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/f
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 const filterOptions = [
   { label: "All", value: "all" },
@@ -21,15 +22,30 @@ export default function InternTasks() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const profileUnsub = onSnapshot(doc(db, "users", currentUser.uid), (snapshot) => {
-      setProfile(snapshot.exists() ? snapshot.data() : null);
-      setLoading(false);
-    });
+    const profileUnsub = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (snapshot) => {
+        setProfile(snapshot.exists() ? snapshot.data() : null);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Profile load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load your profile."));
+        setLoading(false);
+      }
+    );
 
     const tasksQuery = query(collection(db, "tasks"), where("internId", "==", currentUser.uid));
-    const tasksUnsub = onSnapshot(tasksQuery, (snapshot) => {
-      setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-    });
+    const tasksUnsub = onSnapshot(
+      tasksQuery,
+      (snapshot) => {
+        setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+      },
+      (error) => {
+        console.error("Tasks load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
+      }
+    );
 
     return () => {
       profileUnsub();
@@ -58,7 +74,12 @@ export default function InternTasks() {
   const completionRate = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
 
   async function updateStatus(taskId, status) {
-    await updateDoc(doc(db, "tasks", taskId), { status });
+    try {
+      await updateDoc(doc(db, "tasks", taskId), { status });
+    } catch (error) {
+      console.error("Update task status error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't update the task. Please try again."));
+    }
   }
 
   if (loading) {

@@ -3,6 +3,7 @@ import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/f
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
+import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 
 function displayTime(isoString) {
   if (!isoString) return "—";
@@ -24,14 +25,29 @@ export default function ManagerAttendance() {
 
     const internsQuery = query(collection(db, "users"), where("managerId", "==", currentUser.uid));
 
-    const unsubInterns = onSnapshot(internsQuery, (snapshot) => {
-      setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      setLoading(false);
-    });
+    const unsubInterns = onSnapshot(
+      internsQuery,
+      (snapshot) => {
+        setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Interns load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load your interns."));
+        setLoading(false);
+      }
+    );
 
-    const unsubAttendance = onSnapshot(collection(db, "attendance"), (snapshot) => {
-      setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-    });
+    const unsubAttendance = onSnapshot(
+      collection(db, "attendance"),
+      (snapshot) => {
+        setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
+      },
+      (error) => {
+        console.error("Attendance load error:", error);
+        notifyError(friendlyFirestoreError(error, "Couldn't load attendance."));
+      }
+    );
 
     return () => {
       unsubInterns();
@@ -75,17 +91,27 @@ export default function ManagerAttendance() {
   }, [today, visibleRecords]);
 
   async function saveComment(recordId, managerComment) {
-    await updateDoc(doc(db, "attendance", recordId), {
-      managerComment,
-      managerCommentUpdatedAt: new Date().toISOString(),
-    });
+    try {
+      await updateDoc(doc(db, "attendance", recordId), {
+        managerComment,
+        managerCommentUpdatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Save comment error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't save the comment. Please try again."));
+    }
   }
 
   async function updateStatus(recordId, status) {
-    await updateDoc(doc(db, "attendance", recordId), {
-      status,
-      reviewedByManagerAt: new Date().toISOString(),
-    });
+    try {
+      await updateDoc(doc(db, "attendance", recordId), {
+        status,
+        reviewedByManagerAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Update attendance status error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't update the status. Please try again."));
+    }
   }
 
   if (loading) {
