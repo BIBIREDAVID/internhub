@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function role() {
-      return isSignedIn() && userDoc(request.auth.uid).data.role;
+      return userDoc(request.auth.uid).data.role;
     }
 
     function isHR() {

@@ -23,18 +23,19 @@ A role-based intern management portal (HR / Manager / Intern) built with React, 
    npm run dev
    ```
 
-## Deploying Firestore security rules
+## Deploying
 
-This repo includes `firestore.rules`, `firestore.indexes.json`, and `firebase.json`. **The app has no server — every access-control decision that matters is enforced by these rules, not by the React code.** The `ProtectedRoute` component only hides UI; it does not stop a signed-in user from calling Firestore directly. Deploy the rules before treating any environment as real:
+This repo includes `firestore.rules`, `firestore.indexes.json`, `firebase.json`, and `.firebaserc` (pinned to `internhub-217a6`). **The app has no server — every access-control decision that matters is enforced by the Firestore rules, not by the React code.** The `ProtectedRoute` component only hides UI; it does not stop a signed-in user from calling Firestore directly.
 
 ```
 npm install -g firebase-tools   # once
 firebase login
-firebase use internhub-217a6    # or your project id
-firebase deploy --only firestore:rules
+npm run build
+firebase deploy --only firestore:rules   # security rules
+firebase deploy --only hosting           # the built app (dist/)
 ```
 
-Until the rules are deployed, whatever ruleset already exists on the Firebase project is what governs access — check the Firebase console (Firestore → Rules) if you're unsure what's live.
+Live at https://internhub-217a6.web.app. Whatever ruleset is currently deployed governs access — check the Firebase console (Firestore → Rules) if you're unsure what's live, and redeploy `firestore.rules` any time it changes; it is not applied automatically.
 
 ## Data model
 
