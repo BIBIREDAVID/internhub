@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";

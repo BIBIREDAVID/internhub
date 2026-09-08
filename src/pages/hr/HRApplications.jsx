@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
 import { notifyError, notifySuccess, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";

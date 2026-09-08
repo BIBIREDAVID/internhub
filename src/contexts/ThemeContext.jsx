@@ -1,11 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { ThemeContext } from "./theme-context-instance";
 
-const ThemeContext = createContext();
 const STORAGE_KEY = "internhub-theme";
-
-export function useTheme() {
-  return useContext(ThemeContext);
-}
 
 function getInitialTheme() {
   if (typeof window === "undefined") return "dark";

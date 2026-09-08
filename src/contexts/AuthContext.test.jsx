@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { AuthProvider, useAuth } from "./AuthContext";
+import { AuthProvider } from "./AuthContext";
+import { useAuth } from "./useAuth";
 
 let authStateCallback;
 const mockGetDoc = vi.fn();

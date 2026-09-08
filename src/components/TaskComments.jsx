@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../firebase";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/useAuth";
 import { notifyError, friendlyFirestoreError } from "../utils/toast";
 import { theme } from "../theme";
 

@@ -5,6 +5,19 @@ on:
     branches: [master]
   pull_request:
 
+env:
+  # Firebase client config isn't secret (it's shipped in the browser bundle
+  # either way), but CI has no .env — without these, firebase.js's getAuth()
+  # throws synchronously on the missing apiKey and crashes the whole app
+  # before React ever renders, taking every e2e test down with it. These
+  # are placeholders; e2e tests never make a real Firebase call.
+  VITE_FIREBASE_API_KEY: ci-placeholder-key
+  VITE_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+  VITE_FIREBASE_PROJECT_ID: ci-placeholder
+  VITE_FIREBASE_STORAGE_BUCKET: ci-placeholder.firebasestorage.app
+  VITE_FIREBASE_MESSAGING_SENDER_ID: "000000000000"
+  VITE_FIREBASE_APP_ID: "1:000000000000:web:0000000000000000000000"
+
 jobs:
   build-lint-test:
     runs-on: ubuntu-latest

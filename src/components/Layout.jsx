@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
-import { useAuth } from "../contexts/AuthContext";
-import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/useAuth";
+import { useTheme } from "../contexts/useTheme";
 import Toaster from "./Toaster";
 import { theme } from "../theme";
 
