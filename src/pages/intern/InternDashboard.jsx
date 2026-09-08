@@ -4,6 +4,8 @@ import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { theme } from "../../theme";
+import StatsRow from "../../components/StatsRow";
+import { PageSkeleton } from "../../components/Skeleton";
 
 export default function InternDashboard() {
   const { currentUser } = useAuth();
@@ -39,7 +41,7 @@ export default function InternDashboard() {
 
   if (loading) return (
     <Layout>
-      <div style={{ color: theme.muted, padding: "40px", textAlign: "center" }}>Loading your dashboard...</div>
+      <PageSkeleton stats={4} rows={3} />
     </Layout>
   );
 
@@ -65,19 +67,14 @@ export default function InternDashboard() {
         </p>
       </div>
 
-      <div style={styles.statsRow}>
-        {[
+      <StatsRow
+        items={[
           { label: "Completed", value: completed, color: theme.success },
           { label: "In Progress", value: inProgress, color: theme.primary },
           { label: "Pending", value: pending, color: theme.warning },
           { label: "Total Tasks", value: tasks.length, color: theme.info },
-        ].map((s) => (
-          <div key={s.label} style={styles.statCard}>
-            <div style={{ ...styles.statValue, color: s.color }}>{s.value}</div>
-            <div style={styles.statLabel}>{s.label}</div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       <div style={styles.grid}>
         <div style={styles.card}>
@@ -158,21 +155,6 @@ const styles = {
   welcome: { marginBottom: "24px" },
   welcomeTitle: { fontSize: "22px", fontWeight: "700", margin: 0 },
   welcomeSub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
-  statsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "16px",
-    marginBottom: "24px",
-  },
-  statCard: {
-    background: theme.surface,
-    borderRadius: "12px",
-    padding: "20px",
-    textAlign: "center",
-    border: "1px solid #334155",
-  },
-  statValue: { fontSize: "32px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: theme.faint, fontSize: "13px" },
   grid: {
     display: "grid",
     gridTemplateColumns: "1fr 340px",

@@ -5,6 +5,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
+import StatsRow from "../../components/StatsRow";
+import { PageSkeleton } from "../../components/Skeleton";
 
 function displayTime(isoString) {
   if (!isoString) return "—";
@@ -106,7 +108,7 @@ export default function ManagerAttendance() {
   if (loading) {
     return (
       <Layout pageTitle="Attendance">
-        <div style={styles.loading}>Loading attendance...</div>
+        <PageSkeleton stats={4} rows={4} />
       </Layout>
     );
   }
@@ -120,19 +122,14 @@ export default function ManagerAttendance() {
         </div>
       </div>
 
-      <div style={styles.statsRow}>
-        {[
+      <StatsRow
+        items={[
           { label: "Checked In Today", value: stats.present, color: theme.success },
           { label: "Late Today", value: stats.late, color: theme.warning },
           { label: "Comments Added", value: stats.comments, color: theme.primary },
           { label: "Tracked Records", value: visibleRecords.length, color: theme.info },
-        ].map((stat) => (
-          <div key={stat.label} style={styles.statCard}>
-            <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
-            <div style={styles.statLabel}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       <div style={styles.toolbar}>
         <input
@@ -217,14 +214,9 @@ export default function ManagerAttendance() {
 }
 
 const styles = {
-  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
-  statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "16px", marginBottom: "24px" },
-  statCard: { background: theme.surface, borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
-  statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: theme.faint, fontSize: "13px" },
   toolbar: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" },
   searchInput: { flex: "1 1 240px", padding: "10px 12px", background: theme.bg, border: "1px solid #334155", borderRadius: "8px", color: theme.text, fontSize: "14px" },
   filterBtn: { borderRadius: "999px", border: "1px solid", padding: "8px 14px", fontSize: "13px", cursor: "pointer" },

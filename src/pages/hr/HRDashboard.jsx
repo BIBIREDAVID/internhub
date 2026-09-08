@@ -4,6 +4,8 @@ import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { theme } from "../../theme";
+import StatsRow from "../../components/StatsRow";
+import { PageSkeleton } from "../../components/Skeleton";
 
 export default function HRDashboard() {
   const { currentUser } = useAuth();
@@ -63,7 +65,7 @@ export default function HRDashboard() {
   if (loading) {
     return (
       <Layout pageTitle="HR Dashboard">
-        <div style={styles.loading}>Loading HR data...</div>
+        <PageSkeleton stats={4} rows={4} />
       </Layout>
     );
   }
@@ -79,19 +81,14 @@ export default function HRDashboard() {
         </div>
       </div>
 
-      <div style={styles.statsRow}>
-        {[
+      <StatsRow
+        items={[
           { label: "Interns", value: interns.length, color: theme.primary },
           { label: "Managers", value: managers.length, color: theme.info },
           { label: "Active Tasks", value: activeTasks.length, color: theme.warning },
           { label: "Completion Rate", value: `${completionRate}%`, color: theme.success },
-        ].map((stat) => (
-          <div key={stat.label} style={styles.statCard}>
-            <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
-            <div style={styles.statLabel}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       <div style={styles.grid}>
         <div style={styles.card}>
@@ -178,25 +175,9 @@ export default function HRDashboard() {
 }
 
 const styles = {
-  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
-  statsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "16px",
-    marginBottom: "24px",
-  },
-  statCard: {
-    background: theme.surface,
-    borderRadius: "12px",
-    padding: "20px",
-    textAlign: "center",
-    border: "1px solid #334155",
-  },
-  statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: theme.faint, fontSize: "13px" },
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" },
   card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155", marginBottom: "16px" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },

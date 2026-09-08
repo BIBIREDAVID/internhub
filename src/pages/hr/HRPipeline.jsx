@@ -3,6 +3,8 @@ import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../../firebase";
 import Layout from "../../components/Layout";
 import { theme } from "../../theme";
+import StatsRow from "../../components/StatsRow";
+import { PageSkeleton } from "../../components/Skeleton";
 
 const stages = ["new", "screening", "interview", "offer", "onboarding", "rejected"];
 
@@ -43,7 +45,7 @@ export default function HRPipeline() {
   if (loading) {
     return (
       <Layout pageTitle="Hiring Pipeline">
-        <div style={styles.loading}>Loading pipeline...</div>
+        <PageSkeleton stats={6} rows={0} />
       </Layout>
     );
   }
@@ -57,14 +59,12 @@ export default function HRPipeline() {
         </div>
       </div>
 
-      <div style={styles.statsRow}>
-        {stages.map((stage) => (
-          <div key={stage} style={styles.statCard}>
-            <div style={styles.statValue}>{counts[stage] || 0}</div>
-            <div style={styles.statLabel}>{stage}</div>
-          </div>
-        ))}
-      </div>
+      <StatsRow
+        items={stages.map((stage) => ({
+          label: stage.charAt(0).toUpperCase() + stage.slice(1),
+          value: counts[stage] || 0,
+        }))}
+      />
 
       <div style={styles.board}>
         {stages.map((stage) => (
@@ -97,14 +97,9 @@ export default function HRPipeline() {
 }
 
 const styles = {
-  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
-  statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px", marginBottom: "24px" },
-  statCard: { background: theme.surface, borderRadius: "12px", padding: "16px", textAlign: "center", border: "1px solid #334155" },
-  statValue: { color: theme.text, fontSize: "22px", fontWeight: "700" },
-  statLabel: { color: theme.muted, fontSize: "12px", marginTop: "4px", textTransform: "capitalize" },
   board: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" },
   column: { background: theme.surface, border: "1px solid #334155", borderRadius: "14px", padding: "16px" },
   columnHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },

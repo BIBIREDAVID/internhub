@@ -3,6 +3,8 @@ import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
+import StatsRow from "../../components/StatsRow";
+import { PageSkeleton } from "../../components/Skeleton";
 
 const steps = ["Setup", "Offer", "Manager Intro", "Orientation", "First Task"];
 const internConstraints = [where("role", "==", "intern")];
@@ -18,7 +20,7 @@ export default function HROnboarding() {
   if (loading) {
     return (
       <Layout pageTitle="Onboarding">
-        <div style={styles.loading}>Loading onboarding...</div>
+        <PageSkeleton stats={4} rows={4} />
       </Layout>
     );
   }
@@ -32,19 +34,14 @@ export default function HROnboarding() {
         </div>
       </div>
 
-      <div style={styles.statsRow}>
-        {[
+      <StatsRow
+        items={[
           { label: "Interns", value: interns.length, color: theme.primary },
           { label: "Started", value: interns.filter((intern) => (intern.onboardingStep ?? 0) > 0).length, color: theme.success },
           { label: "Midway", value: interns.filter((intern) => (intern.onboardingStep ?? 0) >= 2 && (intern.onboardingStep ?? 0) < 5).length, color: theme.warning },
           { label: "Done", value: interns.filter((intern) => (intern.onboardingStep ?? 0) >= 5).length, color: theme.info },
-        ].map((stat) => (
-          <div key={stat.label} style={styles.statCard}>
-            <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
-            <div style={styles.statLabel}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       <div style={styles.card}>
         <div style={styles.cardTitle}>Checklist Progress</div>
@@ -108,14 +105,9 @@ export default function HROnboarding() {
 
 const styles = {
   loadMoreBtn: { marginTop: "16px", width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, cursor: "pointer", fontSize: "13px", fontWeight: "600" },
-  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
-  statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "16px", marginBottom: "24px" },
-  statCard: { background: theme.surface, borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
-  statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: theme.faint, fontSize: "13px" },
   card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   list: { display: "flex", flexDirection: "column", gap: "12px" },

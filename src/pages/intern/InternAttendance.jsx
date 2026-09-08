@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { collection, doc, onSnapshot, query, setDoc, where } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
+import StatsRow from "../../components/StatsRow";
+import { PageSkeleton } from "../../components/Skeleton";
+import { useAttendanceStats } from "./hooks/useAttendanceStats";
+import WeekStrip from "./components/WeekStrip";
+import AttendanceHistoryList from "./components/AttendanceHistoryList";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -14,15 +19,6 @@ function displayTime(isoString) {
   if (!isoString) return "—";
   const date = new Date(isoString);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function weekStart() {
-  const date = new Date();
-  const day = date.getDay();
-  const diff = day === 0 ? 6 : day - 1;
-  date.setDate(date.getDate() - diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
 }
 
 export default function InternAttendance() {
@@ -67,60 +63,19 @@ export default function InternAttendance() {
     };
   }, [currentUser]);
 
-  const sortedRecords = useMemo(
-    () =>
-      [...records].sort((left, right) => {
-        const leftDate = new Date(`${left.date || "1970-01-01"}T00:00:00`);
-        const rightDate = new Date(`${right.date || "1970-01-01"}T00:00:00`);
-        return rightDate - leftDate;
-      }),
-    [records]
-  );
-
-  const todaysRecord = records.find((record) => record.date === today) || null;
-  const presentCount = records.filter((record) => record.status === "present").length;
-  const absentCount = records.filter((record) => record.status === "absent").length;
-  const lateCount = records.filter((record) => record.status === "late").length;
-  const attendanceRate = records.length ? Math.round((presentCount / records.length) * 100) : 0;
-  const recentWindowStart = weekStart();
-  const recentRecords = records.filter((record) => new Date(`${record.date || "1970-01-01"}T00:00:00`) >= recentWindowStart);
-  const weeklyPresent = recentRecords.filter((record) => record.status === "present").length;
-  const weeklyLate = recentRecords.filter((record) => record.status === "late").length;
-  const weeklyAbsent = recentRecords.filter((record) => record.status === "absent").length;
-  const lastFiveDays = Array.from({ length: 5 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (4 - index));
-    const key = date.toISOString().slice(0, 10);
-    const record = records.find((item) => item.date === key);
-    return {
-      key,
-      label: date.toLocaleDateString([], { weekday: "short" }),
-      status: record?.status || "missing",
-      record,
-    };
-  });
-  const attendedStreak = [...records]
-    .sort((left, right) => new Date(right.date) - new Date(left.date))
-    .reduce((streak, record, index, list) => {
-      if (record.status !== "present" && record.status !== "late") {
-        return streak;
-      }
-
-      if (index === 0) {
-        return 1;
-      }
-
-      const previous = list[index - 1];
-      const currentDate = new Date(`${record.date}T00:00:00`);
-      const previousDate = new Date(`${previous.date}T00:00:00`);
-      const diffDays = Math.round((currentDate - previousDate) / 86400000);
-
-      if (diffDays === 1 && (previous.status === "present" || previous.status === "late")) {
-        return streak + 1;
-      }
-
-      return streak;
-    }, 0);
+  const {
+    sortedRecords,
+    todaysRecord,
+    presentCount,
+    absentCount,
+    lateCount,
+    attendanceRate,
+    weeklyPresent,
+    weeklyLate,
+    weeklyAbsent,
+    lastFiveDays,
+    attendedStreak,
+  } = useAttendanceStats(records, today);
 
   async function checkIn() {
     setSaving(true);
@@ -163,7 +118,7 @@ export default function InternAttendance() {
   if (loading) {
     return (
       <Layout pageTitle="Attendance">
-        <div style={styles.loading}>Loading attendance...</div>
+        <PageSkeleton stats={4} rows={3} />
       </Layout>
     );
   }
@@ -188,25 +143,20 @@ export default function InternAttendance() {
         </div>
       </div>
 
-      <div style={styles.statsRow}>
-        {[
+      <StatsRow
+        items={[
           { label: "Present", value: presentCount, color: theme.success },
           { label: "Late", value: lateCount, color: theme.warning },
           { label: "Absent", value: absentCount, color: theme.danger },
           { label: "Attendance Rate", value: `${attendanceRate}%`, color: theme.primary },
-        ].map((stat) => (
-          <div key={stat.label} style={styles.statCard}>
-            <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
-            <div style={styles.statLabel}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       <div style={styles.card}>
         <div style={styles.cardHeader}>
           <div>
             <h3 style={styles.cardTitle}>Attendance Summary</h3>
-            <p style={styles.cardSub}>A quick look at the last few days and this week’s movement.</p>
+            <p style={styles.cardSub}>A quick look at the last few days and this week's movement.</p>
           </div>
           <div style={styles.summaryBadge}>{attendedStreak} day streak</div>
         </div>
@@ -226,27 +176,7 @@ export default function InternAttendance() {
           </div>
         </div>
 
-        <div style={styles.weekStrip}>
-          {lastFiveDays.map((day) => (
-            <div key={day.key} style={styles.dayTile}>
-              <div style={styles.dayName}>{day.label}</div>
-              <div
-                style={{
-                  ...styles.dayDot,
-                  background:
-                    day.status === "present"
-                      ? theme.success
-                      : day.status === "late"
-                        ? theme.warning
-                        : day.status === "absent"
-                          ? theme.danger
-                          : theme.border,
-                }}
-              />
-              <div style={styles.dayStatus}>{day.status === "missing" ? "No record" : day.status}</div>
-            </div>
-          ))}
-        </div>
+        <WeekStrip days={lastFiveDays} />
       </div>
 
       <div style={styles.card}>
@@ -277,153 +207,31 @@ export default function InternAttendance() {
 
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Recent History</h3>
-        {sortedRecords.length === 0 ? (
-          <p style={styles.empty}>No attendance history yet.</p>
-        ) : (
-          <div style={styles.list}>
-            {sortedRecords.slice(0, 10).map((record) => (
-              <div key={record.id} style={styles.row}>
-                <div style={styles.rowMain}>
-                  <div style={styles.rowTitle}>{record.date}</div>
-                  <div style={styles.rowMeta}>
-                    In: {displayTime(record.checkIn)} · Out: {displayTime(record.checkOut)}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    ...styles.statusPill,
-                    background:
-                      record.status === "present"
-                        ? theme.successSoft
-                        : record.status === "late"
-                          ? theme.warningSoft
-                          : theme.dangerSoft,
-                  }}
-                >
-                  {record.status || "present"}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <AttendanceHistoryList records={sortedRecords} />
       </div>
     </Layout>
   );
 }
 
 const styles = {
-  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   actions: { display: "flex", gap: "10px", flexWrap: "wrap" },
-  primaryBtn: {
-    padding: "10px 16px",
-    background: theme.primary,
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-  secondaryBtn: {
-    padding: "10px 16px",
-    background: theme.surface,
-    color: "#e2e8f0",
-    border: "1px solid #334155",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-  statsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "16px",
-    marginBottom: "24px",
-  },
-  statCard: {
-    background: theme.surface,
-    borderRadius: "12px",
-    padding: "20px",
-    textAlign: "center",
-    border: "1px solid #334155",
-  },
-  statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: theme.faint, fontSize: "13px" },
-  card: {
-    background: theme.surface,
-    borderRadius: "12px",
-    padding: "20px",
-    border: "1px solid #334155",
-    marginBottom: "16px",
-  },
+  primaryBtn: { padding: "10px 16px", background: theme.primary, color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
+  secondaryBtn: { padding: "10px 16px", background: theme.surface, color: "#e2e8f0", border: `1px solid ${theme.border}`, borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
+  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: `1px solid ${theme.border}`, marginBottom: "16px" },
   cardHeader: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   cardSub: { color: theme.muted, fontSize: "12px", margin: "4px 0 0" },
-  summaryBadge: {
-    padding: "6px 10px",
-    borderRadius: "999px",
-    background: theme.bg,
-    border: "1px solid #334155",
-    color: "#cbd5e1",
-    fontSize: "12px",
-    fontWeight: "700",
-    whiteSpace: "nowrap",
-  },
-  summaryGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "12px",
-    marginBottom: "16px",
-  },
-  summaryPanel: {
-    background: theme.bg,
-    border: "1px solid #334155",
-    borderRadius: "10px",
-    padding: "14px",
-  },
+  summaryBadge: { padding: "6px 10px", borderRadius: "999px", background: theme.bg, border: `1px solid ${theme.border}`, color: "#cbd5e1", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap" },
+  summaryGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginBottom: "16px" },
+  summaryPanel: { background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: "10px", padding: "14px" },
   summaryLabel: { color: theme.muted, fontSize: "12px", marginBottom: "6px" },
   summaryValue: { color: theme.text, fontSize: "16px", fontWeight: "700" },
   summaryMeta: { color: theme.muted, fontSize: "12px", marginTop: "4px", lineHeight: 1.5 },
-  weekStrip: { display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "10px" },
-  dayTile: {
-    background: theme.bg,
-    border: "1px solid #334155",
-    borderRadius: "10px",
-    padding: "12px 10px",
-    textAlign: "center",
-  },
-  dayName: { color: theme.muted, fontSize: "12px", marginBottom: "8px" },
-  dayDot: { width: "16px", height: "16px", borderRadius: "50%", margin: "0 auto 8px" },
-  dayStatus: { color: "#e2e8f0", fontSize: "11px", textTransform: "capitalize" },
   empty: { color: theme.muted, fontSize: "13px", margin: 0 },
-  todayRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: "16px",
-  },
+  todayRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "16px" },
   todayLabel: { color: theme.faint, fontSize: "12px", marginBottom: "4px" },
   todayValue: { color: theme.text, fontSize: "14px", fontWeight: "600" },
-  list: { display: "flex", flexDirection: "column", gap: "10px" },
-  row: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "16px",
-    background: theme.bg,
-    border: "1px solid #334155",
-    borderRadius: "10px",
-    padding: "12px",
-  },
-  rowMain: { flex: 1, minWidth: 0 },
-  rowTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
-  rowMeta: { color: theme.muted, fontSize: "12px", marginTop: "3px" },
-  statusPill: {
-    padding: "4px 10px",
-    borderRadius: "999px",
-    color: "#fff",
-    fontSize: "11px",
-    fontWeight: "700",
-    whiteSpace: "nowrap",
-  },
 };

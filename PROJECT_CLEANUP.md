@@ -30,10 +30,10 @@ This is the prioritized list of work needed to turn the app into a more complete
 
 - [x] Add tests for auth and routing
   - `vitest` + Testing Library. `ProtectedRoute.test.jsx` covers the three redirect/access outcomes; `AuthContext.test.jsx` covers role resolution, signed-out state, and a missing `users/{uid}` doc. Run with `npm test`.
-- [ ] Split large pages into smaller components
-  - Deliberately deferred — several pages (`ManagerTasks`, `InternAttendance`, etc.) mix fetching/forms/styles in one file, but splitting ~15 pages in one pass risked regressions for cosmetic gain. Worth doing incrementally, page by page, with its own review.
-- [ ] Improve loading skeletons
-  - Still a plain "Loading..." string per page. Lower priority than the above; revisit once the page-splitting pass gives these a shared layout to skeleton against.
+- [x] Split large pages into smaller components
+  - Extracted the modal/list-item/derived-stats pieces out of the four biggest pages into colocated `components/` and `hooks/` folders: `HRApplications` → `ApplicationDetailModal`; `ManagerTasks` → `TaskFormModal` + `TaskCard`; `ManagerDashboard` → `AssignTaskModal` + `InternProgressCard`; `InternAttendance` → `useAttendanceStats` hook + `WeekStrip` + `AttendanceHistoryList`; `InternOnboarding` → `useOnboardingChecklist` hook + `ChecklistStep`. Biggest page went from 429 lines to 237. Also added `src/components/StatsRow.jsx`, deduping the near-identical stat-card block that was copy-pasted into 14 pages.
+- [x] Improve loading skeletons
+  - Added `src/components/Skeleton.jsx` (`Skeleton`, `StatsRowSkeleton`, `ListSkeleton`, `PageSkeleton`) with a CSS pulse animation (`index.css`); every page's plain "Loading..." text now renders a layout-shaped skeleton instead.
 - [x] Review bundle size
   - Routes are now `React.lazy`-loaded (`src/App.jsx`) behind one `Suspense` boundary, so each page ships as its own chunk instead of one ~700KB bundle. The remaining ~590KB entry chunk is mostly the Firebase SDK; further reduction would mean swapping SDKs, not app code.
 
@@ -51,6 +51,6 @@ This is the prioritized list of work needed to turn the app into a more complete
 
 ## Remaining work
 
-- Splitting large pages into smaller components and loading skeletons (P2, cosmetic/maintainability) are still open — see notes above.
 - Form validation beyond the manager task form and the invite form hasn't been fully reviewed.
 - No password-reset / resend-invite flow yet.
+- `src/index.css` had unused Vite-template CSS (`#root` capped at 1126px, centered, bordered) that fought the app's actual full-height sidebar layout — removed along with the dead `App.css` and unused template assets (`react.svg`, `vite.svg`, `hero.png`). Worth a visual smoke-test after this change since no one may have noticed the constraint before.

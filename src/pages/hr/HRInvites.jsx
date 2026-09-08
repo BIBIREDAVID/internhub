@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, notifySuccess, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
+import { PageSkeleton } from "../../components/Skeleton";
 
 const emptyForm = { email: "", name: "", role: "intern", managerId: "" };
 
@@ -94,7 +95,7 @@ export default function HRInvites() {
   if (loading) {
     return (
       <Layout pageTitle="Invites">
-        <div style={styles.loading}>Loading invites...</div>
+        <PageSkeleton stats={0} rows={3} />
       </Layout>
     );
   }
@@ -193,7 +194,6 @@ export default function HRInvites() {
 }
 
 const styles = {
-  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "8px", lineHeight: 1.6, maxWidth: "640px" },

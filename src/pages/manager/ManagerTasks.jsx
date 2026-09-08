@@ -5,6 +5,10 @@ import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
 import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
+import StatsRow from "../../components/StatsRow";
+import { PageSkeleton } from "../../components/Skeleton";
+import TaskCard from "./components/TaskCard";
+import TaskFormModal from "./components/TaskFormModal";
 
 const emptyTask = {
   title: "",
@@ -85,6 +89,13 @@ export default function ManagerTasks() {
     setShowModal(true);
   }
 
+  function closeModal() {
+    setShowModal(false);
+    setEditingTask(null);
+    setSelectedInternId("");
+    setForm(emptyTask);
+  }
+
   async function saveTask() {
     if (!form.title.trim()) {
       notifyError("Task title is required.");
@@ -115,11 +126,7 @@ export default function ManagerTasks() {
           createdAt: new Date().toISOString(),
         });
       }
-
-      setShowModal(false);
-      setEditingTask(null);
-      setSelectedInternId("");
-      setForm(emptyTask);
+      closeModal();
     } catch (error) {
       console.error("Save task error:", error);
       notifyError(friendlyFirestoreError(error, "Couldn't save the task. Please try again."));
@@ -150,7 +157,7 @@ export default function ManagerTasks() {
   if (loading) {
     return (
       <Layout pageTitle="Tasks">
-        <div style={styles.loading}>Loading tasks...</div>
+        <PageSkeleton stats={4} rows={4} />
       </Layout>
     );
   }
@@ -165,19 +172,14 @@ export default function ManagerTasks() {
         <button onClick={() => openCreate()} style={styles.primaryBtn}>+ New Task</button>
       </div>
 
-      <div style={styles.statsRow}>
-        {[
+      <StatsRow
+        items={[
           { label: "Total Tasks", value: tasks.length, color: theme.primary },
           { label: "In Progress", value: inProgress, color: theme.warning },
           { label: "Completed", value: completed, color: theme.success },
           { label: "Open", value: tasks.length - completed, color: theme.info },
-        ].map((stat) => (
-          <div key={stat.label} style={styles.statCard}>
-            <div style={{ ...styles.statValue, color: stat.color }}>{stat.value}</div>
-            <div style={styles.statLabel}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       <div style={styles.toolbar}>
         {["all", "pending", "in-progress", "completed"].map((value) => (
@@ -202,138 +204,45 @@ export default function ManagerTasks() {
           {visibleTasks.length === 0 ? (
             <p style={styles.empty}>No tasks match this filter.</p>
           ) : (
-            visibleTasks.map((task) => {
-              const intern = interns.find((item) => item.id === task.internId);
-              return (
-                <div key={task.id} style={styles.taskCard}>
-                  <div style={styles.taskTop}>
-                    <div>
-                      <div style={styles.taskTitle}>{task.title}</div>
-                      <div style={styles.taskMeta}>
-                        {intern?.name || "No intern"} · Due {task.dueDate || "unscheduled"} · {task.priority || "medium"} priority
-                      </div>
-                    </div>
-                    <select
-                      value={task.status || "pending"}
-                      onChange={(event) => changeStatus(task.id, event.target.value)}
-                      style={{
-                        ...styles.statusSelect,
-                        background:
-                          task.status === "completed"
-                            ? theme.successSoft
-                            : task.status === "in-progress"
-                              ? "#1d4ed8"
-                              : theme.warningSoft,
-                      }}
-                    >
-                      <option value="pending">pending</option>
-                      <option value="in-progress">in-progress</option>
-                      <option value="completed">completed</option>
-                    </select>
-                  </div>
-                  <div style={styles.taskDesc}>{task.description || "No description provided."}</div>
-                  <div style={styles.taskActions}>
-                    <button onClick={() => openEdit(task)} style={styles.actionBtn}>Edit</button>
-                    <button onClick={() => removeTask(task.id)} style={styles.dangerBtn}>Delete</button>
-                  </div>
-                </div>
-              );
-            })
+            visibleTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                intern={interns.find((item) => item.id === task.internId)}
+                onChangeStatus={changeStatus}
+                onEdit={openEdit}
+                onDelete={removeTask}
+              />
+            ))
           )}
         </div>
       </div>
 
-      {showModal ? (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <h3 style={styles.modalTitle}>{editingTask ? "Edit Task" : "Create Task"}</h3>
-
-            <div style={styles.field}>
-              <label style={styles.label}>Assign To</label>
-              <select
-                value={selectedInternId}
-                onChange={(event) => setSelectedInternId(event.target.value)}
-                style={styles.input}
-              >
-                <option value="">Choose an intern</option>
-                {interns.map((intern) => (
-                  <option key={intern.id} value={intern.id}>{intern.name || intern.email}</option>
-                ))}
-              </select>
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Title</label>
-              <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} style={styles.input} />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Description</label>
-              <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} style={{ ...styles.input, height: "90px", resize: "vertical" }} />
-            </div>
-            <div style={styles.grid}>
-              <div style={styles.field}>
-                <label style={styles.label}>Due Date</label>
-                <input type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} style={styles.input} />
-              </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Priority</label>
-                <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })} style={styles.input}>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Status</label>
-              <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} style={styles.input}>
-                <option value="pending">pending</option>
-                <option value="in-progress">in-progress</option>
-                <option value="completed">completed</option>
-              </select>
-            </div>
-            <div style={styles.modalBtns}>
-              <button onClick={() => { setShowModal(false); setEditingTask(null); setSelectedInternId(""); setForm(emptyTask); }} style={styles.cancelBtn}>Cancel</button>
-              <button onClick={saveTask} disabled={!selectedInternId || !form.title} style={styles.primaryBtn}>{editingTask ? "Save Changes" : "Create Task"}</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {showModal && (
+        <TaskFormModal
+          interns={interns}
+          selectedInternId={selectedInternId}
+          onSelectIntern={setSelectedInternId}
+          form={form}
+          onChangeForm={setForm}
+          editingTask={editingTask}
+          onCancel={closeModal}
+          onSave={saveTask}
+        />
+      )}
     </Layout>
   );
 }
 
 const styles = {
-  loading: { color: theme.muted, padding: "40px", textAlign: "center" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   primaryBtn: { padding: "10px 20px", background: theme.primary, color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
-  statsRow: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "16px", marginBottom: "24px" },
-  statCard: { background: theme.surface, borderRadius: "12px", padding: "20px", textAlign: "center", border: "1px solid #334155" },
-  statValue: { fontSize: "28px", fontWeight: "700", marginBottom: "4px" },
-  statLabel: { color: theme.faint, fontSize: "13px" },
   toolbar: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" },
   filterBtn: { borderRadius: "999px", border: "1px solid", padding: "8px 14px", fontSize: "13px", cursor: "pointer" },
-  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: "1px solid #334155" },
+  card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: `1px solid ${theme.border}` },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
   taskList: { display: "flex", flexDirection: "column", gap: "12px" },
-  taskCard: { background: theme.bg, border: "1px solid #334155", borderRadius: "12px", padding: "14px" },
-  taskTop: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" },
-  taskTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
-  taskMeta: { color: theme.muted, fontSize: "12px", marginTop: "4px" },
-  taskDesc: { color: "#cbd5e1", fontSize: "13px", marginTop: "10px", lineHeight: 1.5 },
-  statusSelect: { border: "none", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "11px", fontWeight: "700" },
-  taskActions: { display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" },
-  actionBtn: { padding: "7px 10px", background: theme.surface, color: "#e2e8f0", border: "1px solid #334155", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
-  dangerBtn: { padding: "7px 10px", background: "#7f1d1d", color: "#fff", border: "1px solid #b91c1c", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
   empty: { color: theme.muted, fontSize: "13px", margin: 0 },
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 },
-  modal: { background: theme.surface, borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "520px", border: "1px solid #334155" },
-  modalTitle: { fontSize: "17px", fontWeight: "700", margin: "0 0 20px 0", color: "#f1f5f9" },
-  field: { marginBottom: "14px" },
-  grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
-  label: { display: "block", color: theme.muted, fontSize: "13px", marginBottom: "6px", fontWeight: "500" },
-  input: { width: "100%", padding: "10px 12px", background: theme.bg, border: "1px solid #334155", borderRadius: "8px", color: "#f1f5f9", fontSize: "14px", boxSizing: "border-box" },
-  modalBtns: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" },
-  cancelBtn: { padding: "10px 20px", background: "transparent", border: "1px solid #334155", color: theme.muted, borderRadius: "8px", cursor: "pointer", fontSize: "14px" },
 };
