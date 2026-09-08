@@ -46,13 +46,16 @@ This is the prioritized list of work needed to turn the app into a more complete
 - [x] Reduce hardcoded colors in pages
   - Mechanically replaced the repeated hex literals across every page with `theme.*` references.
 
+## Account & Access (added after the original list)
+
 - [x] In-app account provisioning
   - Added an invite flow: **HR → Invites** writes an `invites/{email}` doc; the invitee signs up at `/signup` and self-provisions their own `users/{uid}` doc, which `firestore.rules` only allows when a matching invite exists. No more manual Firebase-console account creation.
-
 - [x] Password reset
   - Added `/forgot-password` (`src/pages/auth/ForgotPassword.jsx`) using Firebase Auth's `sendPasswordResetEmail`. Linked from the login page. Deliberately shows the same "check your inbox" message whether or not the email has an account, to avoid leaking which emails are registered.
+- [x] Resend invite
+  - **HR → Invites** now has a "Resend" button per pending invite: it bumps `invitedAt`/`invitedBy` on the existing invite doc and copies ready-to-send sign-up instructions to the clipboard (there's no email backend, so HR pastes them into an email/Slack message themselves). Each row also shows "Invited Xm/h/d ago" so stale invites are easy to spot.
 
-## Remaining work
+## Notes
 
-- No resend-invite flow yet — HR would delete and recreate the invite doc from **HR → Invites**.
-- `src/index.css` had unused Vite-template CSS (`#root` capped at 1126px, centered, bordered) that fought the app's actual full-height sidebar layout — removed along with the dead `App.css` and unused template assets (`react.svg`, `vite.svg`, `hero.png`). Worth a visual smoke-test after this change since no one may have noticed the constraint before.
+- `src/index.css` had unused Vite-template CSS (`#root` capped at 1126px, centered, bordered) that fought the app's actual full-height sidebar layout — removed along with the dead `App.css` and unused template assets (`react.svg`, `vite.svg`, `hero.png`).
+- Everything on this list is now done. Future work (invite expiry, real email delivery, admin audit log, etc.) should get its own tracking rather than reusing this file.

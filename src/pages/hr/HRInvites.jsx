@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, deleteDoc, doc, onSnapshot, query, setDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, onSnapshot, query, setDoc, updateDoc, where } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
@@ -8,6 +8,18 @@ import { theme } from "../../theme";
 import { PageSkeleton } from "../../components/Skeleton";
 
 const emptyForm = { email: "", name: "", role: "intern", managerId: "" };
+
+function relativeTime(isoString) {
+  if (!isoString) return "unknown";
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 export default function HRInvites() {
   const { currentUser } = useAuth();
@@ -89,6 +101,27 @@ export default function HRInvites() {
     } catch (error) {
       console.error("Cancel invite error:", error);
       notifyError(friendlyFirestoreError(error, "Couldn't cancel the invite. Please try again."));
+    }
+  }
+
+  async function resendInvite(invite) {
+    try {
+      await updateDoc(doc(db, "invites", invite.id), {
+        invitedAt: new Date().toISOString(),
+        invitedBy: currentUser.uid,
+      });
+
+      const instructions = `You've been invited to InternHub as ${invite.role === "hr" ? "an" : "a"} ${invite.role}. Sign up at ${window.location.origin}/signup using this email: ${invite.email}`;
+
+      try {
+        await navigator.clipboard.writeText(instructions);
+        notifySuccess(`Invite refreshed for ${invite.email} — sign-up instructions copied to your clipboard.`);
+      } catch {
+        notifySuccess(`Invite refreshed for ${invite.email}.`);
+      }
+    } catch (error) {
+      console.error("Resend invite error:", error);
+      notifyError(friendlyFirestoreError(error, "Couldn't resend the invite. Please try again."));
     }
   }
 
@@ -181,8 +214,12 @@ export default function HRInvites() {
                   <div>
                     <div style={styles.rowTitle}>{invite.name || "Unnamed"}</div>
                     <div style={styles.rowMeta}>{invite.email} · {invite.role}</div>
+                    <div style={styles.rowMeta}>Invited {relativeTime(invite.invitedAt)}</div>
                   </div>
-                  <button onClick={() => cancelInvite(invite.id)} style={styles.cancelBtn}>Cancel</button>
+                  <div style={styles.rowActions}>
+                    <button onClick={() => resendInvite(invite)} style={styles.resendBtn}>Resend</button>
+                    <button onClick={() => cancelInvite(invite.id)} style={styles.cancelBtn}>Cancel</button>
+                  </div>
                 </div>
               ))
             )}
@@ -206,9 +243,11 @@ const styles = {
   input: { padding: "10px 12px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: theme.bg, color: theme.text, fontSize: "14px" },
   primaryBtn: { padding: "10px", borderRadius: "8px", border: "none", background: theme.primary, color: "#fff", fontSize: "14px", fontWeight: "600", cursor: "pointer", marginTop: "4px" },
   list: { display: "flex", flexDirection: "column", gap: "10px" },
-  row: { display: "flex", justifyContent: "space-between", alignItems: "center", background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: "10px", padding: "12px 14px" },
+  row: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: "10px", padding: "12px 14px" },
   rowTitle: { color: theme.text, fontWeight: "600", fontSize: "13px" },
   rowMeta: { color: theme.faint, fontSize: "12px", marginTop: "2px" },
+  rowActions: { display: "flex", gap: "8px", flexShrink: 0 },
+  resendBtn: { padding: "6px 10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.primary, fontSize: "12px", fontWeight: "600", cursor: "pointer" },
   cancelBtn: { padding: "6px 10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.danger, fontSize: "12px", fontWeight: "600", cursor: "pointer" },
   empty: { color: theme.faint, fontSize: "13px", margin: 0 },
 };

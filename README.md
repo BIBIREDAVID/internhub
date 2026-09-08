@@ -93,6 +93,6 @@ Only HR can create/update invites. The signup page reads the invite matching the
 
 ## Known gaps
 
-- No "resend invite" flow yet — HR would delete and recreate the invite doc from **HR → Invites**. Password reset itself is handled at `/forgot-password`.
+- Invites don't expire and there's no real email delivery — "Resend" (HR → Invites) refreshes the invite and copies sign-up instructions to the clipboard for HR to paste into an email/Slack message themselves.
 - Large pages (e.g. `ManagerTasks`, `InternAttendance`) mix data-fetching, form state, and a big inline `styles` object in one file. Not split into smaller components — flagged as P2 in `PROJECT_CLEANUP.md`, deliberately deferred to avoid churn/regressions in a single pass.
 - No loading skeletons — pages show a plain "Loading..." string while the first Firestore snapshot resolves.
