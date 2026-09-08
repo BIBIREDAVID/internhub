@@ -15,9 +15,13 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install -g npm@11
-
-      - run: npm ci
+      # package-lock.json is generated on Windows and some platform-gated
+      # optional dependencies (e.g. wasm32-wasi napi bindings) only fully
+      # resolve their own sub-dependencies when npm install runs on the
+      # matching OS, so the lockfile isn't reliably complete for Linux and
+      # `npm ci`'s strict sync check fails here. `npm install` re-resolves
+      # instead of requiring an exact match.
+      - run: npm install
 
       - run: npm run lint
 
@@ -34,9 +38,7 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install -g npm@11
-
-      - run: npm ci
+      - run: npm install
 
       - run: npx playwright install --with-deps chromium
 
