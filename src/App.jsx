@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const Login = lazy(() => import("./pages/auth/Login"));
 const Signup = lazy(() => import("./pages/auth/Signup"));
+const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const HRDashboard = lazy(() => import("./pages/hr/HRDashboard"));
 const HRApplications = lazy(() => import("./pages/hr/HRApplications"));
 const HRPipeline = lazy(() => import("./pages/hr/HRPipeline"));
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route path="/hr/dashboard" element={
             <ProtectedRoute allowedRoles={["hr"]}>

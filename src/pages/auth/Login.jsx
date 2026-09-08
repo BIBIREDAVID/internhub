@@ -88,6 +88,9 @@ export default function Login() {
         </form>
 
         <p style={styles.footer}>
+          <Link to="/forgot-password" style={styles.link}>Forgot password?</Link>
+        </p>
+        <p style={styles.footer}>
           Have an invite? <Link to="/signup" style={styles.link}>Create an account</Link>
         </p>
       </div>

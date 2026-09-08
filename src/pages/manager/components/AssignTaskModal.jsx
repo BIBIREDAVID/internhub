@@ -60,7 +60,9 @@ export default function AssignTaskModal({ interns, selectedIntern, onSelectInter
 
         <div style={styles.modalBtns}>
           <button onClick={onCancel} style={styles.cancelBtn}>Cancel</button>
-          <button onClick={onSubmit} style={styles.primaryBtn}>Assign Task</button>
+          <button onClick={onSubmit} disabled={!selectedIntern || !task.title.trim()} style={styles.primaryBtn}>
+            Assign Task
+          </button>
         </div>
       </div>
     </div>

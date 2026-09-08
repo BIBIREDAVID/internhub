@@ -93,6 +93,6 @@ Only HR can create/update invites. The signup page reads the invite matching the
 
 ## Known gaps
 
-- No password-reset / "resend invite" flow yet — HR would delete and recreate the invite doc, or a user uses Firebase's own "forgot password" if they already have an account.
+- No "resend invite" flow yet — HR would delete and recreate the invite doc from **HR → Invites**. Password reset itself is handled at `/forgot-password`.
 - Large pages (e.g. `ManagerTasks`, `InternAttendance`) mix data-fetching, form state, and a big inline `styles` object in one file. Not split into smaller components — flagged as P2 in `PROJECT_CLEANUP.md`, deliberately deferred to avoid churn/regressions in a single pass.
 - No loading skeletons — pages show a plain "Loading..." string while the first Firestore snapshot resolves.

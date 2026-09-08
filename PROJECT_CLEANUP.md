@@ -17,8 +17,8 @@ This is the prioritized list of work needed to turn the app into a more complete
 
 - [x] Extract shared theme tokens
   - Added `src/theme.js` (dark blue/slate palette: primary, success, warning, danger, bg, surface, border, text). All page-level `styles` objects now import it instead of hardcoding hex; a handful of one-off accent shades were left as-is deliberately.
-- [ ] Add validation to all forms
-  - Manager task form now requires a title and an assigned intern; other forms still need review.
+- [x] Add validation to all forms
+  - Every form that writes to Firestore now validates: Login/Signup (email format, password length/match), HRInvites (name/email required, email regex), ManagerTasks and ManagerDashboard's task forms (title + assigned intern required, due date can't be in the past on create). Reviewed every remaining `<input>`/`<select>`/`<textarea>` in the app (search boxes, status dropdowns, optional comments) — the rest don't need validation since they're either constrained to a fixed option set or intentionally optional free text.
 - [x] Add empty states and retry states
   - Firestore listeners now surface load failures via toast instead of failing silently.
 - [x] Add pagination or collection limits
@@ -49,8 +49,10 @@ This is the prioritized list of work needed to turn the app into a more complete
 - [x] In-app account provisioning
   - Added an invite flow: **HR → Invites** writes an `invites/{email}` doc; the invitee signs up at `/signup` and self-provisions their own `users/{uid}` doc, which `firestore.rules` only allows when a matching invite exists. No more manual Firebase-console account creation.
 
+- [x] Password reset
+  - Added `/forgot-password` (`src/pages/auth/ForgotPassword.jsx`) using Firebase Auth's `sendPasswordResetEmail`. Linked from the login page. Deliberately shows the same "check your inbox" message whether or not the email has an account, to avoid leaking which emails are registered.
+
 ## Remaining work
 
-- Form validation beyond the manager task form and the invite form hasn't been fully reviewed.
-- No password-reset / resend-invite flow yet.
+- No resend-invite flow yet — HR would delete and recreate the invite doc from **HR → Invites**.
 - `src/index.css` had unused Vite-template CSS (`#root` capped at 1126px, centered, bordered) that fought the app's actual full-height sidebar layout — removed along with the dead `App.css` and unused template assets (`react.svg`, `vite.svg`, `hero.png`). Worth a visual smoke-test after this change since no one may have noticed the constraint before.

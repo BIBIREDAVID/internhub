@@ -66,7 +66,18 @@ export default function ManagerDashboard() {
   }
 
   async function handleAssignTask() {
-    if (!selectedIntern) return;
+    if (!selectedIntern) {
+      notifyError("Select an intern to assign this task to.");
+      return;
+    }
+    if (!newTask.title.trim()) {
+      notifyError("Task title is required.");
+      return;
+    }
+    if (newTask.dueDate && newTask.dueDate < new Date().toISOString().slice(0, 10)) {
+      notifyError("Due date can't be in the past.");
+      return;
+    }
     try {
       await addDoc(collection(db, "tasks"), {
         ...newTask,

@@ -105,6 +105,10 @@ export default function ManagerTasks() {
       notifyError("Select an intern to assign this task to.");
       return;
     }
+    if (!editingTask && form.dueDate && form.dueDate < new Date().toISOString().slice(0, 10)) {
+      notifyError("Due date can't be in the past.");
+      return;
+    }
 
     const payload = {
       title: form.title,
