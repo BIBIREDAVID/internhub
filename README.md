@@ -53,7 +53,7 @@ Doc id = Firebase Auth UID.
 | `onboardingChecklist` | array | Intern-owned; the only field an intern may write on their own doc besides `onboardingStep`. |
 | `onboardingStep` | number | |
 
-There is currently no in-app account-creation flow — new `users/{uid}` docs (and the matching Firebase Auth account) must be created by HR directly in the Firebase console or via the Admin SDK. This is the biggest remaining gap for real onboarding; see "Known gaps" below.
+New accounts are provisioned through an invite, not directly: HR sends one from **HR → Invites**, which writes an `invites/{email}` doc; the invitee then signs up at `/signup` with that exact email, and the client self-provisions its own `users/{uid}` doc — allowed only because a matching invite exists (enforced in `firestore.rules`, not just the UI). See `invites` below.
 
 ### `tasks/{taskId}`
 | Field | Type | Notes |
@@ -79,8 +79,20 @@ Doc id is deterministic (`internId_date`) so an intern can only ever have one re
 ### `applications/{applicationId}`
 HR-only recruitment pipeline (`status`/`stage`, `reviewedAt`, `reviewedBy`, candidate fields). Nothing in this app writes new applications — they're expected to be seeded/imported by HR.
 
+### `invites/{email}`
+Doc id = lowercased email (not a uid — the account doesn't exist yet).
+
+| Field | Type | Notes |
+|---|---|---|
+| `email`, `name`, `role` | string | What the new `users/{uid}` doc will get on signup. |
+| `managerId` | string (uid) \| null | Optional; HR can also assign a manager later from **All Interns**. |
+| `invitedBy` | string (uid) | The HR user who sent it. |
+| `invitedAt` | ISO string | |
+
+Only HR can create/update invites. The signup page reads the invite matching the signed-in user's own email (rules restrict that read to HR or the matching email) and deletes it once redeemed. If no invite exists for the email someone tries to sign up with, the just-created Firebase Auth account is deleted immediately and they're shown an error — there's no way to self-register without one.
+
 ## Known gaps
 
-- No in-app flow to create HR/manager/intern accounts — do this in the Firebase console (Auth: add user; Firestore: create the matching `users/{uid}` doc with a `role`).
-- `/hr/reports` is a placeholder screen (`SectionPlaceholder`) pending a real reports feature.
-- No automated tests yet.
+- No password-reset / "resend invite" flow yet — HR would delete and recreate the invite doc, or a user uses Firebase's own "forgot password" if they already have an account.
+- Large pages (e.g. `ManagerTasks`, `InternAttendance`) mix data-fetching, form state, and a big inline `styles` object in one file. Not split into smaller components — flagged as P2 in `PROJECT_CLEANUP.md`, deliberately deferred to avoid churn/regressions in a single pass.
+- No loading skeletons — pages show a plain "Loading..." string while the first Firestore snapshot resolves.

@@ -17,6 +17,7 @@ const navItems = {
     ]},
     { section: "WORKFORCE", items: [
       { label: "All Interns", path: "/hr/interns", icon: "👤" },
+      { label: "Invites", path: "/hr/invites", icon: "✉️" },
       { label: "Onboarding", path: "/hr/onboarding", icon: "🚀", badge: null },
       { label: "Attendance", path: "/hr/attendance", icon: "🕐" },
     ]},

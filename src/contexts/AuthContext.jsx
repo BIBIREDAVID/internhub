@@ -14,22 +14,20 @@ export function AuthProvider({ children }) {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  async function loadRole(user) {
+    try {
+      const docSnap = await getDoc(doc(db, "users", user.uid));
+      setUserRole(docSnap.exists() ? docSnap.data().role ?? null : null);
+    } catch (error) {
+      console.error("Auth profile load error:", error);
+      setUserRole(null);
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        try {
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            setUserRole(docSnap.data().role ?? null);
-          } else {
-            setUserRole(null);
-          }
-        } catch (error) {
-          console.error("Auth profile load error:", error);
-          setUserRole(null);
-        }
+        await loadRole(user);
         setCurrentUser(user);
       } else {
         setCurrentUser(null);
@@ -41,10 +39,18 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
+  // Call after writing a users/{uid} doc for the current session (e.g. right
+  // after self-provisioning during signup) so the role in context catches up
+  // without waiting for another auth state change.
+  async function refreshUserRole() {
+    if (auth.currentUser) await loadRole(auth.currentUser);
+  }
+
   const value = {
     currentUser,
     userRole,
     loading,
+    refreshUserRole,
   };
 
   return (

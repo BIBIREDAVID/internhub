@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { theme } from "../../theme";
 
@@ -86,6 +86,10 @@ export default function Login() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <p style={styles.footer}>
+          Have an invite? <Link to="/signup" style={styles.link}>Create an account</Link>
+        </p>
       </div>
     </div>
   );
@@ -162,5 +166,15 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     marginTop: "8px",
+  },
+  footer: {
+    marginTop: "20px",
+    textAlign: "center",
+    color: theme.faint,
+    fontSize: "13px",
+  },
+  link: {
+    color: theme.primary,
+    fontWeight: "600",
   },
 };

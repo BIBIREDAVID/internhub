@@ -31,6 +31,21 @@ service cloud.firestore {
       return isManager() && userDoc(internId).data.managerId == request.auth.uid;
     }
 
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function inviteDoc() {
+      return get(/databases/$(database)/documents/invites/$(myEmail()));
+    }
+
+    function hasMatchingInvite() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/invites/$(myEmail())) &&
+        inviteDoc().data.role == request.resource.data.role &&
+        request.resource.data.email.lower() == myEmail();
+    }
+
     // ---- users ----
     // Each doc: { role: "hr"|"manager"|"intern", managerId?, name, email, onboardingChecklist?, onboardingStep? }
     match /users/{userId} {
@@ -40,9 +55,12 @@ service cloud.firestore {
         managesIntern(userId)
       );
 
-      // HR provisions/edits any user. Interns may only edit their own
+      // HR provisions/edits any user directly. A brand-new signup may create
+      // *their own* doc, but only if HR left a matching invite for their
+      // email — see /invites below. Interns may only edit their own
       // onboarding progress, never their own role or manager assignment.
-      allow create, delete: if isHR();
+      allow create: if isHR() || (isSignedIn() && request.auth.uid == userId && hasMatchingInvite());
+      allow delete: if isHR();
 
       allow update: if isHR() || (
         isSignedIn() && request.auth.uid == userId &&
@@ -51,6 +69,16 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(["onboardingChecklist", "onboardingStep"])
       );
+    }
+
+    // ---- invites ----
+    // Doc id: lowercased email. Fields: { email, name, role, managerId?, invitedBy, invitedAt }
+    // HR creates one per new hire; the signup page consumes it to self-provision
+    // a users/{uid} doc with the invited role, then deletes the invite.
+    match /invites/{email} {
+      allow read: if isHR() || (isSignedIn() && myEmail() == email);
+      allow create, update: if isHR();
+      allow delete: if isHR() || (isSignedIn() && myEmail() == email);
     }
 
     // ---- tasks ----

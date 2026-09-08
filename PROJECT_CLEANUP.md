@@ -28,14 +28,14 @@ This is the prioritized list of work needed to turn the app into a more complete
 
 ## P2 — Important Polish
 
-- [ ] Add tests for auth and routing
-  - Cover role-based redirects and key page access rules.
+- [x] Add tests for auth and routing
+  - `vitest` + Testing Library. `ProtectedRoute.test.jsx` covers the three redirect/access outcomes; `AuthContext.test.jsx` covers role resolution, signed-out state, and a missing `users/{uid}` doc. Run with `npm test`.
 - [ ] Split large pages into smaller components
-  - Reduce duplication in dashboard cards, tables, modals, and filters.
+  - Deliberately deferred — several pages (`ManagerTasks`, `InternAttendance`, etc.) mix fetching/forms/styles in one file, but splitting ~15 pages in one pass risked regressions for cosmetic gain. Worth doing incrementally, page by page, with its own review.
 - [ ] Improve loading skeletons
-  - Replace generic text loaders with layout-matching placeholders.
-- [ ] Review bundle size
-  - Add code-splitting for large routes if needed.
+  - Still a plain "Loading..." string per page. Lower priority than the above; revisit once the page-splitting pass gives these a shared layout to skeleton against.
+- [x] Review bundle size
+  - Routes are now `React.lazy`-loaded (`src/App.jsx`) behind one `Suspense` boundary, so each page ships as its own chunk instead of one ~700KB bundle. The remaining ~590KB entry chunk is mostly the Firebase SDK; further reduction would mean swapping SDKs, not app code.
 
 ## Color / UI Review
 
@@ -46,8 +46,11 @@ This is the prioritized list of work needed to turn the app into a more complete
 - [x] Reduce hardcoded colors in pages
   - Mechanically replaced the repeated hex literals across every page with `theme.*` references.
 
+- [x] In-app account provisioning
+  - Added an invite flow: **HR → Invites** writes an `invites/{email}` doc; the invitee signs up at `/signup` and self-provisions their own `users/{uid}` doc, which `firestore.rules` only allows when a matching invite exists. No more manual Firebase-console account creation.
+
 ## Remaining work
 
-- Tests for auth/routing, splitting large pages, loading skeletons, and bundle code-splitting (P2) are still open.
-- Form validation beyond the manager task form hasn't been reviewed.
-- No in-app account-provisioning flow (see README "Known gaps").
+- Splitting large pages into smaller components and loading skeletons (P2, cosmetic/maintainability) are still open — see notes above.
+- Form validation beyond the manager task form and the invite form hasn't been fully reviewed.
+- No password-reset / resend-invite flow yet.
