@@ -7,6 +7,7 @@ import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
+import InternTaskItem from "./components/InternTaskItem";
 
 const filterOptions = [
   { label: "All", value: "all" },
@@ -140,37 +141,7 @@ export default function InternTasks() {
         ) : (
           <div style={styles.list}>
             {sortedTasks.map((task) => (
-              <div key={task.id} style={styles.taskItem}>
-                <div style={styles.taskTop}>
-                  <div>
-                    <div style={styles.taskTitle}>{task.title || "Untitled task"}</div>
-                    <div style={styles.taskMeta}>{task.description || "No description provided."}</div>
-                  </div>
-                  <select
-                    value={task.status || "pending"}
-                    onChange={(event) => updateStatus(task.id, event.target.value)}
-                    style={{
-                      ...styles.statusSelect,
-                      background:
-                        task.status === "completed"
-                          ? theme.successSoft
-                          : task.status === "in-progress"
-                            ? "#1d4ed8"
-                            : theme.warningSoft,
-                    }}
-                  >
-                    <option value="pending">pending</option>
-                    <option value="in-progress">in-progress</option>
-                    <option value="completed">completed</option>
-                  </select>
-                </div>
-
-                <div style={styles.taskBottom}>
-                  <span style={styles.metaPill}>Due {task.dueDate || "unscheduled"}</span>
-                  <span style={styles.metaPill}>{task.priority || "medium"} priority</span>
-                  {task.managerId && <span style={styles.metaPill}>Assigned by manager</span>}
-                </div>
-              </div>
+              <InternTaskItem key={task.id} task={task} onChangeStatus={updateStatus} />
             ))}
           </div>
         )}
@@ -203,35 +174,5 @@ const styles = {
     border: "1px solid #334155",
   },
   list: { display: "flex", flexDirection: "column", gap: "12px" },
-  taskItem: {
-    background: theme.bg,
-    borderRadius: "10px",
-    padding: "14px",
-    border: "1px solid #334155",
-  },
-  taskTop: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: "16px",
-  },
-  taskTitle: { fontWeight: "700", fontSize: "14px", color: theme.text },
-  taskMeta: { color: theme.muted, fontSize: "13px", marginTop: "4px", lineHeight: 1.5 },
-  statusSelect: {
-    border: "none",
-    color: "#fff",
-    borderRadius: "999px",
-    padding: "4px 10px",
-    fontSize: "11px",
-    fontWeight: "700",
-  },
-  taskBottom: { display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" },
-  metaPill: {
-    padding: "4px 10px",
-    borderRadius: "999px",
-    background: theme.border,
-    color: "#cbd5e1",
-    fontSize: "11px",
-  },
   empty: { color: theme.muted, fontSize: "13px", margin: 0 },
 };

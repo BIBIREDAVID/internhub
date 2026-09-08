@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 .firebase
+test-results
+playwright-report
+blob-report
 
 # Editor directories and files
 .vscode/*
@@ -24,3 +27,5 @@ dist-ssr
 *.sln
 *.sw?
 .env
+*serviceAccount*.json
+*service-account*.json

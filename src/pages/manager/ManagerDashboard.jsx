@@ -9,6 +9,7 @@ import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
 import InternProgressCard from "./components/InternProgressCard";
 import AssignTaskModal from "./components/AssignTaskModal";
+import WeeklyDigest from "./components/WeeklyDigest";
 
 const emptyTask = { title: "", description: "", dueDate: "", priority: "medium" };
 
@@ -16,6 +17,7 @@ export default function ManagerDashboard() {
   const { currentUser } = useAuth();
   const [interns, setInterns] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedIntern, setSelectedIntern] = useState(null);
@@ -50,6 +52,16 @@ export default function ManagerDashboard() {
         console.error("Tasks error:", error);
         notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
       }
+    );
+    return unsub;
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsub = onSnapshot(
+      collection(db, "attendance"),
+      (snap) => setAttendance(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (error) => console.error("Attendance error:", error)
     );
     return unsub;
   }, [currentUser]);
@@ -131,6 +143,8 @@ export default function ManagerDashboard() {
           { label: "Completion Rate", value: totalTasks ? `${Math.round((completedTasks / totalTasks) * 100)}%` : "0%", color: theme.warning },
         ]}
       />
+
+      <WeeklyDigest interns={interns} tasks={tasks} attendance={attendance} />
 
       <div style={styles.grid}>
         <div style={styles.card}>

@@ -67,7 +67,32 @@ This is the prioritized list of work needed to turn the app into a more complete
 - [x] Rate-limit messaging
   - Login, Signup, and Forgot Password all now show a specific "Too many attempts, wait a few minutes" message for Firebase Auth's `auth/too-many-requests` instead of a generic error — Firebase Auth already throttles repeated attempts server-side; this just surfaces it clearly instead of confusing users with "something went wrong."
 
+## Product & Ops (round 3)
+
+- [x] Intern self-service profile edit
+  - **Onboarding → Your Details → Edit** lets an intern update their own `name`/`department`. `firestore.rules` widened the self-update allowlist accordingly (still can't touch `role`, `managerId`, or `active`). No avatar upload — no Storage rules/bucket set up for it.
+- [x] Task comments
+  - New `tasks/{taskId}/comments` subcollection (immutable, no update/delete) and `src/components/TaskComments.jsx`, wired into both the manager's `TaskCard` and the intern's `InternTaskItem` behind a "Comments" toggle.
+- [x] Cohort/department views
+  - **HR → All Interns** now has department and cohort filter dropdowns (derived from the currently-loaded roster) plus a "Clear filters" button.
+- [x] Manager weekly digest
+  - New `WeeklyDigest` card at the top of the Manager Dashboard: overdue tasks, tasks due within 7 days, and attendance flags (absences or a missing check-in today) across the manager's team — computed client-side from data the dashboard already loads.
+- [x] Soft-delete for users
+  - Added `active` (boolean, defaults true) to `users`. HR toggles Deactivate/Reactivate from **HR → All Interns** (both the intern roster and a new Managers list on the same page) instead of hard-deleting. `firestore.rules`' `isHR()`/`isManager()`/`isIntern()` helpers now also require `active != false`, so a deactivated account loses read/write access everywhere except its own `users/{uid}` doc — existing tasks/attendance/activityLog rows stay intact and resolvable instead of pointing at a vanished user.
+- [x] Export (CSV)
+  - Added `src/utils/csv.js` and "Export CSV" buttons on HR → Applications (loaded rows), HR → Attendance (loaded rows), and HR → Reports (the aggregate summary numbers).
+- [x] Seed/demo data script
+  - `scripts/seed.js` (Node + `firebase-admin`) creates an HR user, two managers, ten interns, tasks, two weeks of attendance, and a dozen applications. Requires a Firebase service-account key (documented in README "Demo data") — this session has no admin credentials for the project, so the script is written and documented but not run.
+- [x] CI
+  - `.github/workflows/ci.yml`: lint + unit tests + build on every push/PR, plus a separate Playwright job.
+- [x] E2E smoke test
+  - Playwright (`e2e/smoke.spec.js`): public pages render, unauthenticated visits to 5 protected routes redirect to `/login`. Browser binary download is blocked in this sandbox's network, so these are written and reviewed but not executed here — CI (open network) runs them for real. Does not cover an authenticated login → dashboard flow per role; that needs seeded test accounts plus the Firebase emulator or CI credentials (documented as a known gap).
+- [x] Error boundary
+  - `src/components/ErrorBoundary.jsx` wraps the whole app in `main.jsx` (outside `AuthProvider`, so an auth-init crash is caught too) — a JS error in any one page now shows a "reload" screen instead of a blank white page.
+- [ ] Real email delivery
+  - Still deliberately skipped (owner's call, round 2) — needs a Blaze-plan Cloud Function, a mail provider, and API keys.
+
 ## Notes
 
 - `src/index.css` had unused Vite-template CSS (`#root` capped at 1126px, centered, bordered) that fought the app's actual full-height sidebar layout — removed along with the dead `App.css` and unused template assets (`react.svg`, `vite.svg`, `hero.png`).
-- Everything on this list is done except real email delivery, which needs an owner decision on billing/mail provider before it can be built. Future work should get its own tracking rather than reusing this file.
+- Everything on this list is done except real email delivery, which needs an owner decision on billing/mail provider before it can be built, and true authenticated E2E coverage, which needs seeded test accounts and either the Firebase emulator or CI credentials. Future work should get its own tracking rather than reusing this file.

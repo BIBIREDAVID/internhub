@@ -10,6 +10,7 @@ import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
 import ApplicationDetailModal from "./components/ApplicationDetailModal";
 import { logActivity } from "../../utils/activityLog";
+import { downloadCsv } from "../../utils/csv";
 
 const statuses = ["all", "new", "shortlisted", "rejected", "hired"];
 
@@ -87,6 +88,21 @@ export default function HRApplications() {
     setChecked(new Set());
   }
 
+  function exportCsv() {
+    downloadCsv(
+      `applications-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { key: "name", label: "Name" },
+        { key: "email", label: "Email" },
+        { key: "department", label: "Department" },
+        { key: "cohortId", label: "Cohort" },
+        { key: "status", label: "Status" },
+        { key: "reviewedAt", label: "Reviewed At" },
+      ],
+      visibleApplications
+    );
+  }
+
   const counts = useMemo(() => {
     return statuses.slice(1).reduce((summary, status) => {
       summary[status] = applications.filter((application) => (application.status || "new") === status).length;
@@ -110,6 +126,7 @@ export default function HRApplications() {
           <p style={styles.sub}>Review applicants, shortlist promising candidates, or reject with a clear status.</p>
           <p style={styles.sub}>Showing {applications.length} loaded application{applications.length === 1 ? "" : "s"}{hasMore ? " (more available)" : ""}. Counts below reflect loaded records.</p>
         </div>
+        <button onClick={exportCsv} style={styles.exportBtn}>Export CSV</button>
       </div>
 
       <StatsRow
@@ -207,6 +224,7 @@ export default function HRApplications() {
 }
 
 const styles = {
+  exportBtn: { padding: "8px 14px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.text, fontSize: "13px", fontWeight: "600", cursor: "pointer", flexShrink: 0 },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },

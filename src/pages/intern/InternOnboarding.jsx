@@ -8,6 +8,7 @@ import { theme } from "../../theme";
 import { PageSkeleton } from "../../components/Skeleton";
 import { useOnboardingChecklist, onboardingSteps } from "./hooks/useOnboardingChecklist";
 import ChecklistStep from "./components/ChecklistStep";
+import ProfileDetailsCard from "./components/ProfileDetailsCard";
 
 export default function InternOnboarding() {
   const { currentUser } = useAuth();
@@ -89,27 +90,7 @@ export default function InternOnboarding() {
         </div>
       </div>
 
-      <div style={styles.card}>
-        <div style={styles.cardTitle}>Your Details</div>
-        <div style={styles.detailsGrid}>
-          <div>
-            <div style={styles.detailLabel}>Department</div>
-            <div style={styles.detailValue}>{profile?.department || "Not set"}</div>
-          </div>
-          <div>
-            <div style={styles.detailLabel}>Cohort</div>
-            <div style={styles.detailValue}>{profile?.cohortId || "Not set"}</div>
-          </div>
-          <div>
-            <div style={styles.detailLabel}>Start Date</div>
-            <div style={styles.detailValue}>{profile?.startDate || "Not set"}</div>
-          </div>
-          <div>
-            <div style={styles.detailLabel}>End Date</div>
-            <div style={styles.detailValue}>{profile?.endDate || "Not set"}</div>
-          </div>
-        </div>
-      </div>
+      <ProfileDetailsCard currentUser={currentUser} profile={profile} />
     </Layout>
   );
 }
@@ -129,7 +110,4 @@ const styles = {
   progressBar: { height: "10px", background: theme.border, borderRadius: "999px", overflow: "hidden" },
   progressFill: { height: "100%", background: theme.primary, borderRadius: "999px" },
   stepList: { display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px" },
-  detailsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "16px", marginTop: "16px" },
-  detailLabel: { color: theme.muted, fontSize: "12px", marginBottom: "4px" },
-  detailValue: { color: theme.text, fontSize: "14px", fontWeight: "600" },
 };

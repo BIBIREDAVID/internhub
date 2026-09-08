@@ -7,6 +7,7 @@ import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
+import { downloadCsv } from "../../utils/csv";
 
 const attendanceConstraints = [orderBy("date", "desc")];
 
@@ -54,6 +55,24 @@ export default function HRAttendance() {
       .sort((left, right) => new Date(`${right.date}T00:00:00`) - new Date(`${left.date}T00:00:00`));
   }, [attendance, filter, search, users]);
 
+  function exportCsv() {
+    downloadCsv(
+      `attendance-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { key: "internName", label: "Intern" },
+        { key: "date", label: "Date" },
+        { key: "status", label: "Status" },
+        { key: "checkIn", label: "Check In" },
+        { key: "checkOut", label: "Check Out" },
+        { key: "managerComment", label: "Manager Comment" },
+      ],
+      visibleRecords.map((record) => ({
+        ...record,
+        internName: users.find((user) => user.id === record.internId)?.name || "Unknown",
+      }))
+    );
+  }
+
   const stats = useMemo(() => {
     return {
       present: attendance.filter((record) => record.status === "present").length,
@@ -78,6 +97,7 @@ export default function HRAttendance() {
           <h2 style={styles.title}>Attendance</h2>
           <p style={styles.sub}>Track attendance, exceptions, lateness flags, and manager comments.</p>
         </div>
+        <button onClick={exportCsv} style={styles.exportBtn}>Export CSV</button>
       </div>
 
       <StatsRow
@@ -167,6 +187,7 @@ export default function HRAttendance() {
 
 const styles = {
   loadMoreBtn: { marginTop: "16px", width: "100%", padding: "10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, cursor: "pointer", fontSize: "13px", fontWeight: "600" },
+  exportBtn: { padding: "8px 14px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.text, fontSize: "13px", fontWeight: "600", cursor: "pointer", flexShrink: 0 },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },

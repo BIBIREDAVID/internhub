@@ -6,6 +6,7 @@ import { notifyError, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
+import { downloadCsv } from "../../utils/csv";
 
 const pipelineStages = ["new", "screening", "interview", "offer", "onboarding", "rejected"];
 
@@ -91,6 +92,27 @@ export default function HRReports() {
 
   const maxPipelineCount = Math.max(1, ...pipelineStages.map((stage) => pipelineCounts[stage] || 0));
 
+  function exportCsv() {
+    downloadCsv(`reports-summary-${new Date().toISOString().slice(0, 10)}.csv`, [
+      { key: "metric", label: "Metric" },
+      { key: "value", label: "Value" },
+    ], [
+      { metric: "Total Interns", value: interns.length },
+      { metric: "Total Managers", value: managers.length },
+      { metric: "Task Completion Rate", value: `${taskStats.rate}%` },
+      { metric: "Tasks Completed", value: taskStats.completed },
+      { metric: "Tasks In Progress", value: taskStats.inProgress },
+      { metric: "Tasks Pending", value: taskStats.pending },
+      { metric: "Average Onboarding Step", value: onboardingStats.avgStep.toFixed(1) },
+      { metric: "Fully Onboarded Interns", value: onboardingStats.complete },
+      { metric: "7-Day Attendance Rate", value: `${attendanceStats.rate}%` },
+      { metric: "7-Day Present", value: attendanceStats.present },
+      { metric: "7-Day Late", value: attendanceStats.late },
+      { metric: "7-Day Absent", value: attendanceStats.absent },
+      ...pipelineStages.map((stage) => ({ metric: `Pipeline: ${stage}`, value: pipelineCounts[stage] || 0 })),
+    ]);
+  }
+
   if (loading) {
     return (
       <Layout pageTitle="Reports">
@@ -106,6 +128,7 @@ export default function HRReports() {
           <h2 style={styles.title}>Reports</h2>
           <p style={styles.sub}>Team-wide insights across recruitment, onboarding, tasks, and attendance.</p>
         </div>
+        <button onClick={exportCsv} style={styles.exportBtn}>Export CSV</button>
       </div>
 
       <StatsRow
@@ -219,6 +242,7 @@ export default function HRReports() {
 }
 
 const styles = {
+  exportBtn: { padding: "8px 14px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.text, fontSize: "13px", fontWeight: "600", cursor: "pointer", flexShrink: 0 },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },

@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { theme } from "../../../theme";
+import TaskComments from "../../../components/TaskComments";
 
 export default function TaskCard({ task, intern, onChangeStatus, onEdit, onDelete }) {
+  const [showComments, setShowComments] = useState(false);
+
   return (
     <div style={styles.taskCard}>
       <div style={styles.taskTop}>
@@ -28,7 +32,11 @@ export default function TaskCard({ task, intern, onChangeStatus, onEdit, onDelet
       <div style={styles.taskActions}>
         <button onClick={() => onEdit(task)} style={styles.actionBtn}>Edit</button>
         <button onClick={() => onDelete(task.id)} style={styles.dangerBtn}>Delete</button>
+        <button onClick={() => setShowComments((current) => !current)} style={styles.actionBtn}>
+          {showComments ? "Hide comments" : "Comments"}
+        </button>
       </div>
+      {showComments && <TaskComments taskId={task.id} />}
     </div>
   );
 }

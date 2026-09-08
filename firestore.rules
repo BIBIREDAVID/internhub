@@ -15,16 +15,20 @@ service cloud.firestore {
       return userDoc(request.auth.uid).data.role;
     }
 
+    function isActiveSelf() {
+      return userDoc(request.auth.uid).data.active != false;
+    }
+
     function isHR() {
-      return isSignedIn() && role() == "hr";
+      return isSignedIn() && role() == "hr" && isActiveSelf();
     }
 
     function isManager() {
-      return isSignedIn() && role() == "manager";
+      return isSignedIn() && role() == "manager" && isActiveSelf();
     }
 
     function isIntern() {
-      return isSignedIn() && role() == "intern";
+      return isSignedIn() && role() == "intern" && isActiveSelf();
     }
 
     function managesIntern(internId) {
@@ -50,11 +54,15 @@ service cloud.firestore {
     function isActiveManager(managerId) {
       return managerId == null ||
         (exists(/databases/$(database)/documents/users/$(managerId)) &&
-          userDoc(managerId).data.role == "manager");
+          userDoc(managerId).data.role == "manager" &&
+          userDoc(managerId).data.active != false);
     }
 
     // ---- users ----
-    // Each doc: { role: "hr"|"manager"|"intern", managerId?, name, email, onboardingChecklist?, onboardingStep? }
+    // Each doc: { role: "hr"|"manager"|"intern", managerId?, name, email, department?,
+    // active?, onboardingChecklist?, onboardingStep? }. `active` defaults to true when
+    // absent — HR deactivates a user instead of hard-deleting so historical
+    // tasks/attendance/activityLog entries keep resolving to a real doc.
     match /users/{userId} {
       allow read: if isSignedIn() && (
         request.auth.uid == userId ||
@@ -62,10 +70,12 @@ service cloud.firestore {
         managesIntern(userId)
       );
 
-      // HR provisions/edits any user directly. A brand-new signup may create
-      // *their own* doc, but only if HR left a matching invite for their
-      // email — see /invites below. Interns may only edit their own
-      // onboarding progress, never their own role or manager assignment.
+      // HR provisions/edits any user directly (and is the only one who can
+      // deactivate one, or change role/managerId). A brand-new signup may
+      // create *their own* doc, but only if HR left a matching invite for
+      // their email — see /invites below. Anyone may edit their own name/
+      // department; interns may also edit their own onboarding progress.
+      // Nobody may reactivate or change their own role/manager assignment.
       allow create: if isHR() || (isSignedIn() && request.auth.uid == userId && hasMatchingInvite());
       allow delete: if isHR();
 
@@ -73,8 +83,9 @@ service cloud.firestore {
         isSignedIn() && request.auth.uid == userId &&
         request.resource.data.role == resource.data.role &&
         request.resource.data.managerId == resource.data.managerId &&
+        request.resource.data.active == resource.data.active &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["onboardingChecklist", "onboardingStep"])
+          .hasOnly(["name", "department", "onboardingChecklist", "onboardingStep"])
       );
     }
 
@@ -106,6 +117,22 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"]));
 
       allow delete: if isHR() || (isManager() && resource.data.managerId == request.auth.uid);
+
+      // ---- tasks/{taskId}/comments ----
+      // Doc: { authorId, authorName, authorRole, text, createdAt }. Anyone who
+      // can read the parent task can comment on it; comments are immutable
+      // once posted (no update/delete) to keep the thread an honest record.
+      match /comments/{commentId} {
+        function canAccessTask() {
+          return isHR() ||
+            (isManager() && get(/databases/$(database)/documents/tasks/$(taskId)).data.managerId == request.auth.uid) ||
+            (isIntern() && get(/databases/$(database)/documents/tasks/$(taskId)).data.internId == request.auth.uid);
+        }
+
+        allow read: if canAccessTask();
+        allow create: if canAccessTask() && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if false;
+      }
     }
 
     // ---- attendance ----
