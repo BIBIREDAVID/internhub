@@ -48,6 +48,6 @@ const styles = {
   taskMeta: { color: theme.muted, fontSize: "13px", marginTop: "4px", lineHeight: 1.5 },
   statusSelect: { border: "none", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "11px", fontWeight: "700" },
   taskBottom: { display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px", alignItems: "center" },
-  metaPill: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: "#cbd5e1", fontSize: "11px" },
+  metaPill: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: theme.muted, fontSize: "11px" },
   commentsBtn: { padding: "4px 10px", borderRadius: "999px", background: "transparent", border: `1px solid ${theme.border}`, color: theme.primary, fontSize: "11px", fontWeight: "600", cursor: "pointer" },
 };

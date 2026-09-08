@@ -171,7 +171,7 @@ const styles = {
     background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
-    border: "1px solid #334155",
+    border: `1px solid ${theme.border}`,
   },
   list: { display: "flex", flexDirection: "column", gap: "12px" },
   empty: { color: theme.muted, fontSize: "13px", margin: 0 },

@@ -247,10 +247,10 @@ const styles = {
   rowTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
   rowMeta: { color: theme.muted, fontSize: "12px", marginTop: "3px" },
   actions: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  openBtn: { padding: "7px 10px", background: theme.surface, color: "#e2e8f0", border: `1px solid ${theme.border}`, borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  openBtn: { padding: "7px 10px", background: theme.surface, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
   shortlistBtn: { padding: "7px 10px", background: theme.successSoft, color: "#fff", border: "1px solid #22c55e", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
   rejectBtn: { padding: "7px 10px", background: "#7f1d1d", color: "#fff", border: "1px solid #ef4444", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
   metaRow: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "12px" },
-  pill: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: "#cbd5e1", fontSize: "11px" },
+  pill: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: theme.muted, fontSize: "11px" },
   empty: { color: theme.muted, fontSize: "13px", margin: 0 },
 };

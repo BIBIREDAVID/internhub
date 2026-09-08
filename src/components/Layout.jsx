@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import Toaster from "./Toaster";
 import { theme } from "../theme";
 
@@ -50,19 +51,10 @@ const navItems = {
 
 export default function Layout({ children, topbarActions, pageTitle }) {
   const { currentUser, userRole } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dark, setDark] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(prefers-color-scheme: dark)").matches : false
-  );
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e) => setDark(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- closes the mobile nav drawer on route change
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
@@ -73,7 +65,6 @@ export default function Layout({ children, topbarActions, pageTitle }) {
   }
 
   const sections = navItems[userRole] || [];
-  const t = dark ? dark_t : light_t;
 
   // Find current page label
   let currentLabel = pageTitle || "Dashboard";
@@ -82,33 +73,33 @@ export default function Layout({ children, topbarActions, pageTitle }) {
   }));
 
   return (
-    <div style={{ ...s.root, background: t.bg, color: t.text }}>
+    <div style={{ ...s.root, background: theme.bg, color: theme.text }}>
 
       {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={s.overlay} />}
 
       {/* Sidebar */}
       <div style={{
         ...s.sidebar,
-        background: t.surface,
-        borderRight: `1px solid ${t.border}`,
+        background: theme.surface,
+        borderRight: `1px solid ${theme.border}`,
         transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
       }}>
         {/* Logo */}
-        <div style={{ ...s.logoWrap, borderBottom: `1px solid ${t.border}` }}>
+        <div style={{ ...s.logoWrap, borderBottom: `1px solid ${theme.border}` }}>
           <div>
-            <div style={{ ...s.logoText, color: t.accent }}>InternHub</div>
-            <div style={{ ...s.logoSub, color: t.muted }}>
+            <div style={{ ...s.logoText, color: theme.primary }}>InternHub</div>
+            <div style={{ ...s.logoSub, color: theme.muted }}>
               {userRole === "hr" ? "HR Administration" : userRole === "manager" ? "Team Management" : "Intern Portal"}
             </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} style={{ ...s.closeBtn, color: t.muted }}>✕</button>
+          <button onClick={() => setSidebarOpen(false)} style={{ ...s.closeBtn, color: theme.muted }}>✕</button>
         </div>
 
         {/* Nav */}
         <nav style={s.nav}>
           {sections.map((section) => (
             <div key={section.section} style={s.navSection}>
-              <div style={{ ...s.sectionLabel, color: t.muted }}>{section.section}</div>
+              <div style={{ ...s.sectionLabel, color: theme.muted }}>{section.section}</div>
               {section.items.map((item) => {
                 const active = location.pathname === item.path;
                 return (
@@ -117,16 +108,16 @@ export default function Layout({ children, topbarActions, pageTitle }) {
                     onClick={() => navigate(item.path)}
                     style={{
                       ...s.navItem,
-                      background: active ? t.accent + "18" : "transparent",
-                      color: active ? t.accent : t.text,
+                      background: active ? theme.primary + "18" : "transparent",
+                      color: active ? theme.primary : theme.text,
                       fontWeight: active ? "600" : "400",
-                      borderLeft: active ? `3px solid ${t.accent}` : "3px solid transparent",
+                      borderLeft: active ? `3px solid ${theme.primary}` : "3px solid transparent",
                     }}
                   >
                     <span style={s.navIcon}>{item.icon}</span>
                     <span>{item.label}</span>
                     {item.badge && (
-                      <span style={{ ...s.badge, background: t.accent }}>{item.badge}</span>
+                      <span style={{ ...s.badge, background: theme.primary }}>{item.badge}</span>
                     )}
                   </button>
                 );
@@ -136,15 +127,15 @@ export default function Layout({ children, topbarActions, pageTitle }) {
         </nav>
 
         {/* User */}
-        <div style={{ ...s.userWrap, borderTop: `1px solid ${t.border}` }}>
-          <div style={{ ...s.userAvatar, background: t.accent }}>
+        <div style={{ ...s.userWrap, borderTop: `1px solid ${theme.border}` }}>
+          <div style={{ ...s.userAvatar, background: theme.primary }}>
             {currentUser?.email?.[0]?.toUpperCase()}
           </div>
           <div style={s.userInfo}>
-            <div style={{ ...s.userName, color: t.text }}>{currentUser?.email?.split("@")[0]}</div>
-            <div style={{ ...s.userRole, color: t.muted }}>{userRole === "hr" ? "HR Manager" : userRole === "manager" ? "Team Manager" : "Intern"}</div>
+            <div style={{ ...s.userName, color: theme.text }}>{currentUser?.email?.split("@")[0]}</div>
+            <div style={{ ...s.userRole, color: theme.muted }}>{userRole === "hr" ? "HR Manager" : userRole === "manager" ? "Team Manager" : "Intern"}</div>
           </div>
-          <button onClick={handleLogout} style={{ ...s.logoutBtn, color: t.muted }} title="Logout">⏻</button>
+          <button onClick={handleLogout} style={{ ...s.logoutBtn, color: theme.muted }} title="Logout">⏻</button>
         </div>
       </div>
 
@@ -153,23 +144,27 @@ export default function Layout({ children, topbarActions, pageTitle }) {
         {/* Topbar */}
         <div style={{
           ...s.topbar,
-          background: t.surface,
-          borderBottom: `1px solid ${t.border}`,
+          background: theme.surface,
+          borderBottom: `1px solid ${theme.border}`,
         }}>
           <div style={s.topbarLeft}>
-            <button onClick={() => setSidebarOpen(true)} style={{ ...s.menuBtn, color: t.muted }}>☰</button>
-            <h1 style={{ ...s.pageTitle, color: t.text }}>{currentLabel}</h1>
+            <button onClick={() => setSidebarOpen(true)} style={{ ...s.menuBtn, color: theme.muted }}>☰</button>
+            <h1 style={{ ...s.pageTitle, color: theme.text }}>{currentLabel}</h1>
           </div>
           <div style={s.topbarRight}>
-            <button onClick={() => setDark(!dark)} style={{ ...s.themeBtn, background: t.bg, color: t.muted, border: `1px solid ${t.border}` }}>
-              {dark ? "☀️" : "🌙"}
+            <button
+              onClick={toggleTheme}
+              style={{ ...s.themeBtn, background: theme.bg, color: theme.muted, border: `1px solid ${theme.border}` }}
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDark ? "☀️" : "🌙"}
             </button>
             {topbarActions}
           </div>
         </div>
 
         {/* Content */}
-        <div style={{ ...s.content, background: t.bg }}>
+        <div style={{ ...s.content, background: theme.bg }}>
           {children}
         </div>
       </div>
@@ -178,26 +173,6 @@ export default function Layout({ children, topbarActions, pageTitle }) {
     </div>
   );
 }
-
-const light_t = {
-  bg: "#f8fafc",
-  surface: "#ffffff",
-  border: "#e2e8f0",
-  text: "#0f172a",
-  muted: "#94a3b8",
-  accent: "#2563eb",
-  cardBg: "#ffffff",
-};
-
-const dark_t = {
-  bg: theme.bg,
-  surface: theme.surface,
-  border: theme.border,
-  text: theme.text,
-  muted: theme.faint,
-  accent: theme.primary,
-  cardBg: theme.surface,
-};
 
 const s = {
   root: { display: "flex", height: "100vh", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", overflow: "hidden" },

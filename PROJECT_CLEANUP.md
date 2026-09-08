@@ -40,11 +40,13 @@ This is the prioritized list of work needed to turn the app into a more complete
 ## Color / UI Review
 
 - [x] Keep the current dark blue/slate direction
-  - Unchanged — `src/theme.js` codifies the existing palette rather than replacing it.
+  - Unchanged — `src/theme.js` codifies the existing palette rather than replacing it. It's still the default.
 - [x] Standardize it into tokens
   - `src/theme.js` exports primary, success, warning, danger, bg, surface, border, and text.
 - [x] Reduce hardcoded colors in pages
-  - Mechanically replaced the repeated hex literals across every page with `theme.*` references.
+  - Mechanically replaced the repeated hex literals across every page with `theme.*` references. (Hit and fixed a Perl string-interpolation bug along the way — `${theme.border}` inside a Perl double-quoted replacement string got silently evaluated as a Perl variable and emptied out in ~9 files; caught by rebuilding after the sweep, not just trusting the diff.)
+- [x] Full light/dark mode
+  - The structural tokens (`bg`/`surface`/`surfaceAlt`/`border`/`text`/`muted`/`faint`) now resolve to CSS custom properties (`index.css`, `:root` vs `:root[data-theme="light"]`) instead of hardcoded hex, so the whole app — not just the sidebar chrome — repaints on toggle. Accent/semantic colors (primary, success, warning, danger, info, and status-badge backgrounds) intentionally stay constant across both themes, same as a brand color would. Added `src/contexts/ThemeContext.jsx` (persists to `localStorage`, defaults to system `prefers-color-scheme`) and wired `Layout`'s existing 🌙/☀️ button to it, replacing the old setup where the toggle only changed the sidebar/topbar and page content stayed dark regardless.
 
 ## Account & Access (added after the original list)
 

@@ -136,7 +136,7 @@ export default function InternDashboard() {
                     </div>
                     <span style={{
                       ...styles.stepLabel,
-                      color: done ? theme.success : current ? "#f1f5f9" : theme.faint,
+                      color: done ? theme.success : current ? theme.text : theme.faint,
                     }}>
                       {step}
                     </span>
@@ -164,7 +164,7 @@ const styles = {
     background: theme.surface,
     borderRadius: "12px",
     padding: "20px",
-    border: "1px solid #334155",
+    border: `1px solid ${theme.border}`,
     marginBottom: "16px",
   },
   cardTitle: { fontSize: "15px", fontWeight: "600", margin: "0 0 16px 0" },
@@ -173,7 +173,7 @@ const styles = {
     background: theme.bg,
     borderRadius: "8px",
     padding: "14px",
-    border: "1px solid #334155",
+    border: `1px solid ${theme.border}`,
   },
   taskTop: {
     display: "flex",
@@ -191,7 +191,7 @@ const styles = {
   },
   taskDesc: { color: theme.faint, fontSize: "13px", margin: "0 0 8px 0" },
   taskBottom: { display: "flex", alignItems: "center", gap: "6px" },
-  taskMeta: { color: "#475569", fontSize: "12px" },
+  taskMeta: { color: theme.muted, fontSize: "12px" },
   priorityDot: { width: "6px", height: "6px", borderRadius: "50%" },
   rightCol: { display: "flex", flexDirection: "column" },
   progressWrap: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" },

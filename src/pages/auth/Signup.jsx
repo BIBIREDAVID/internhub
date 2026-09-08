@@ -4,6 +4,7 @@ import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
+import { theme } from "../../theme";
 
 const dashboardByRole = {
   hr: "/hr/dashboard",
@@ -180,10 +181,10 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#0f172a",
+    background: theme.bg,
   },
   card: {
-    background: "#1e293b",
+    background: theme.surface,
     padding: "40px",
     borderRadius: "16px",
     width: "100%",
@@ -191,21 +192,21 @@ const styles = {
     boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
   },
   title: {
-    color: "#fff",
+    color: theme.text,
     fontSize: "24px",
     fontWeight: "700",
     marginBottom: "4px",
     textAlign: "center",
   },
   subtitle: {
-    color: "#64748b",
+    color: theme.faint,
     fontSize: "14px",
     textAlign: "center",
     marginBottom: "32px",
   },
   error: {
-    background: "#fee2e2",
-    color: "#dc2626",
+    background: theme.dangerBg,
+    color: theme.dangerStrong,
     padding: "10px 14px",
     borderRadius: "8px",
     fontSize: "13px",
@@ -222,16 +223,16 @@ const styles = {
     gap: "6px",
   },
   label: {
-    color: "#94a3b8",
+    color: theme.muted,
     fontSize: "13px",
     fontWeight: "500",
   },
   input: {
     padding: "10px 14px",
     borderRadius: "8px",
-    border: "1px solid #334155",
-    background: "#0f172a",
-    color: "#fff",
+    border: `1px solid ${theme.border}`,
+    background: theme.bg,
+    color: theme.text,
     fontSize: "14px",
     outline: "none",
   },
@@ -239,7 +240,7 @@ const styles = {
     padding: "12px",
     borderRadius: "8px",
     border: "none",
-    background: "#3b82f6",
+    background: theme.primary,
     color: "#fff",
     fontSize: "15px",
     fontWeight: "600",
@@ -249,11 +250,11 @@ const styles = {
   footer: {
     marginTop: "20px",
     textAlign: "center",
-    color: "#64748b",
+    color: theme.faint,
     fontSize: "13px",
   },
   link: {
-    color: "#3b82f6",
+    color: theme.primary,
     fontWeight: "600",
   },
 };

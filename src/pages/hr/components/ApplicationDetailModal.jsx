@@ -56,7 +56,7 @@ const styles = {
   detailLabel: { color: theme.muted, fontSize: "12px", marginBottom: "4px" },
   detailValue: { color: theme.text, fontSize: "14px", fontWeight: "600" },
   noteBox: { marginTop: "16px", background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: "12px", padding: "14px" },
-  noteText: { marginTop: "4px", color: "#cbd5e1", fontSize: "13px", lineHeight: 1.5 },
+  noteText: { marginTop: "4px", color: theme.muted, fontSize: "13px", lineHeight: 1.5 },
   modalBtns: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" },
   shortlistBtn: { padding: "7px 10px", background: theme.successSoft, color: "#fff", border: "1px solid #22c55e", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
   rejectBtn: { padding: "7px 10px", background: "#7f1d1d", color: "#fff", border: "1px solid #ef4444", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },

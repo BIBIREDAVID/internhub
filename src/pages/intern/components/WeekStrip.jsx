@@ -25,5 +25,5 @@ const styles = {
   dayTile: { background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: "10px", padding: "12px 10px", textAlign: "center" },
   dayName: { color: theme.muted, fontSize: "12px", marginBottom: "8px" },
   dayDot: { width: "16px", height: "16px", borderRadius: "50%", margin: "0 auto 8px" },
-  dayStatus: { color: "#e2e8f0", fontSize: "11px", textTransform: "capitalize" },
+  dayStatus: { color: theme.text, fontSize: "11px", textTransform: "capitalize" },
 };

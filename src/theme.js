@@ -1,14 +1,18 @@
-// Shared theme tokens — the dark blue/slate palette used across every page.
-// Import `theme` instead of hardcoding hex values so the palette only needs
-// to change in one place.
+// Shared theme tokens. The structural tokens (bg/surface/border/text/muted/
+// faint) resolve to CSS custom properties defined in index.css, so they
+// automatically follow the light/dark toggle (see ThemeContext) without any
+// component needing to re-render — the browser just repaints on the
+// `data-theme` attribute change. Accent/semantic colors (primary, success,
+// warning, danger, info) stay constant across both themes by design, the
+// same way a brand or status-badge color would on any product.
 export const theme = {
-  bg: "#0f172a",
-  surface: "#1e293b",
-  surfaceAlt: "#111827",
-  border: "#334155",
-  text: "#f8fafc",
-  muted: "#94a3b8",
-  faint: "#64748b",
+  bg: "var(--color-bg)",
+  surface: "var(--color-surface)",
+  surfaceAlt: "var(--color-surface-alt)",
+  border: "var(--color-border)",
+  text: "var(--color-text)",
+  muted: "var(--color-muted)",
+  faint: "var(--color-faint)",
 
   primary: "#3b82f6",
   primaryStrong: "#2563eb",

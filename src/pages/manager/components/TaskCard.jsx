@@ -46,9 +46,9 @@ const styles = {
   taskTop: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" },
   taskTitle: { color: theme.text, fontWeight: "700", fontSize: "14px" },
   taskMeta: { color: theme.muted, fontSize: "12px", marginTop: "4px" },
-  taskDesc: { color: "#cbd5e1", fontSize: "13px", marginTop: "10px", lineHeight: 1.5 },
+  taskDesc: { color: theme.muted, fontSize: "13px", marginTop: "10px", lineHeight: 1.5 },
   statusSelect: { border: "none", color: "#fff", borderRadius: "999px", padding: "4px 10px", fontSize: "11px", fontWeight: "700" },
   taskActions: { display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" },
-  actionBtn: { padding: "7px 10px", background: theme.surface, color: "#e2e8f0", border: `1px solid ${theme.border}`, borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  actionBtn: { padding: "7px 10px", background: theme.surface, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
   dangerBtn: { padding: "7px 10px", background: "#7f1d1d", color: "#fff", border: "1px solid #b91c1c", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
 };

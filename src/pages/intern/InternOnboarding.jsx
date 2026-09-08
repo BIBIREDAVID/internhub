@@ -101,7 +101,7 @@ const styles = {
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
   actions: { display: "flex", gap: "10px", flexWrap: "wrap" },
   primaryBtn: { padding: "10px 16px", background: theme.primary, color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
-  secondaryBtn: { padding: "10px 16px", background: theme.surface, color: "#e2e8f0", border: `1px solid ${theme.border}`, borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
+  secondaryBtn: { padding: "10px 16px", background: theme.surface, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: "8px", cursor: "pointer", fontWeight: "600" },
   card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: `1px solid ${theme.border}`, marginBottom: "16px" },
   cardTitle: { fontSize: "15px", fontWeight: "700", margin: 0, color: theme.text },
   progressHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "14px" },

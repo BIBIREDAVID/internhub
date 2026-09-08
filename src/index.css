@@ -1,15 +1,37 @@
 :root {
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   font: 16px/145% var(--sans);
-  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Dark is InternHub's native palette — the default. */
+  color-scheme: dark;
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-alt: #111827;
+  --color-border: #334155;
+  --color-text: #f8fafc;
+  --color-muted: #94a3b8;
+  --color-faint: #64748b;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-muted: #475569;
+  --color-faint: #64748b;
 }
 
 body {
   margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 #root {

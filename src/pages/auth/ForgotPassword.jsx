@@ -99,7 +99,7 @@ const styles = {
     boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
   },
   title: {
-    color: "#fff",
+    color: theme.text,
     fontSize: "24px",
     fontWeight: "700",
     marginBottom: "4px",
@@ -147,7 +147,7 @@ const styles = {
     borderRadius: "8px",
     border: `1px solid ${theme.border}`,
     background: theme.bg,
-    color: "#fff",
+    color: theme.text,
     fontSize: "14px",
     outline: "none",
   },

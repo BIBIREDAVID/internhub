@@ -338,11 +338,11 @@ const styles = {
   value: { color: theme.text, fontSize: "14px", fontWeight: "600" },
   input: { width: "100%", padding: "10px 12px", background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: "8px", color: theme.text, fontSize: "14px" },
   warning: { color: theme.warning, fontSize: "11px", marginTop: "6px", lineHeight: 1.4 },
-  pill: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: "#cbd5e1", fontSize: "11px", whiteSpace: "nowrap" },
+  pill: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: theme.muted, fontSize: "11px", whiteSpace: "nowrap" },
   deactivatedTag: { padding: "2px 8px", borderRadius: "999px", background: theme.dangerSoft, color: "#fff", fontSize: "10px", fontWeight: "700" },
   deactivateBtn: { padding: "6px 10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.danger, fontSize: "12px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" },
   reactivateBtn: { padding: "6px 10px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.success, fontSize: "12px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap" },
   tags: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  tag: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: "#cbd5e1", fontSize: "11px" },
+  tag: { padding: "4px 10px", borderRadius: "999px", background: theme.border, color: theme.muted, fontSize: "11px" },
   empty: { color: theme.muted, fontSize: "13px", margin: 0 },
 };
