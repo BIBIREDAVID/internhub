@@ -26,6 +26,11 @@ export default function ForgotPassword() {
     } catch (err) {
       // Don't reveal whether an account exists for this email — only surface
       // errors that mean the request itself was malformed or blocked.
+      if (err.code === "auth/too-many-requests") {
+        setLoading(false);
+        setError("Too many requests. Please wait a few minutes and try again.");
+        return;
+      }
       if (err.code !== "auth/user-not-found") {
         setLoading(false);
         setError("Something went wrong. Please try again.");

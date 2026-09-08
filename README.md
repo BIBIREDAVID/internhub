@@ -86,13 +86,24 @@ Doc id = lowercased email (not a uid — the account doesn't exist yet).
 |---|---|---|
 | `email`, `name`, `role` | string | What the new `users/{uid}` doc will get on signup. |
 | `managerId` | string (uid) \| null | Optional; HR can also assign a manager later from **All Interns**. |
-| `invitedBy` | string (uid) | The HR user who sent it. |
+| `invitedBy` | string (uid) | The HR user who last sent/resent it. |
 | `invitedAt` | ISO string | |
+| `expiresAt` | Timestamp | 7 days from send/resend. Enforced in `firestore.rules` — signup fails once passed, not just hidden in the UI. |
 
-Only HR can create/update invites. The signup page reads the invite matching the signed-in user's own email (rules restrict that read to HR or the matching email) and deletes it once redeemed. If no invite exists for the email someone tries to sign up with, the just-created Firebase Auth account is deleted immediately and they're shown an error — there's no way to self-register without one.
+Only HR can create/update invites. The signup page reads the invite matching the signed-in user's own email (rules restrict that read to HR or the matching email), checks it hasn't expired, and deletes it once redeemed. If no invite exists (or it's expired) for the email someone tries to sign up with, the just-created Firebase Auth account is deleted immediately and they're shown an error — there's no way to self-register without a live invite. **HR → Invites** shows "Expires in N days" per pending invite and a "Resend" action that extends it another 7 days and copies sign-up instructions to the clipboard (there's no email backend, so HR pastes them into an email/Slack message themselves).
+
+### `activityLog/{entryId}`
+Append-only audit trail, HR-only (read and create; `firestore.rules` blocks update/delete entirely). Written via `src/utils/activityLog.js` whenever HR reassigns a manager, changes an application's status, or sends/resends/cancels an invite. Viewable at **HR → Activity Log**.
+
+| Field | Type | Notes |
+|---|---|---|
+| `action` | string | e.g. `reassign_manager`, `application_status_change`, `invite_sent` |
+| `actorId`, `actorEmail` | string | The HR user who performed it. |
+| `targetType`, `targetId` | string | What was acted on. |
+| `details` | object | Action-specific context (e.g. old/new manager name). |
+| `createdAt` | ISO string | |
 
 ## Known gaps
 
-- Invites don't expire and there's no real email delivery — "Resend" (HR → Invites) refreshes the invite and copies sign-up instructions to the clipboard for HR to paste into an email/Slack message themselves.
-- Large pages (e.g. `ManagerTasks`, `InternAttendance`) mix data-fetching, form state, and a big inline `styles` object in one file. Not split into smaller components — flagged as P2 in `PROJECT_CLEANUP.md`, deliberately deferred to avoid churn/regressions in a single pass.
-- No loading skeletons — pages show a plain "Loading..." string while the first Firestore snapshot resolves.
+- No real email delivery — invite/resend and password-reset both rely on Firebase's own transactional emails (password reset) or a clipboard-copy workaround (invites), since automated invite email would need a Cloud Function + paid plan + mail provider.
+- Bulk actions (HR → Applications, HR → All Interns) update each selected record with a separate write via `Promise.allSettled`, not a single Firestore batch — fine at this app's scale, but a batch write would be more efficient past a few hundred records.

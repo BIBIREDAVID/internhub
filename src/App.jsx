@@ -13,6 +13,7 @@ const HRInvites = lazy(() => import("./pages/hr/HRInvites"));
 const HROnboarding = lazy(() => import("./pages/hr/HROnboarding"));
 const HRAttendance = lazy(() => import("./pages/hr/HRAttendance"));
 const HRReports = lazy(() => import("./pages/hr/HRReports"));
+const HRActivityLog = lazy(() => import("./pages/hr/HRActivityLog"));
 const ManagerDashboard = lazy(() => import("./pages/manager/ManagerDashboard"));
 const ManagerInterns = lazy(() => import("./pages/manager/ManagerInterns"));
 const ManagerTasks = lazy(() => import("./pages/manager/ManagerTasks"));
@@ -81,6 +82,12 @@ export default function App() {
           <Route path="/hr/reports" element={
             <ProtectedRoute allowedRoles={["hr"]}>
               <HRReports />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/hr/activity" element={
+            <ProtectedRoute allowedRoles={["hr"]}>
+              <HRActivityLog />
             </ProtectedRoute>
           } />
 

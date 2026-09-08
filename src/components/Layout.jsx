@@ -23,6 +23,7 @@ const navItems = {
     ]},
     { section: "ANALYTICS", items: [
       { label: "Reports", path: "/hr/reports", icon: "📈" },
+      { label: "Activity Log", path: "/hr/activity", icon: "📜" },
     ]},
   ],
   manager: [

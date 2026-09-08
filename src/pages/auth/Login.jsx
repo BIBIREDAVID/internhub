@@ -41,6 +41,8 @@ export default function Login() {
     } catch (err) {
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
         setError("Invalid email or password.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please wait a few minutes and try again.");
       } else {
         setError("Something went wrong. Please try again.");
       }

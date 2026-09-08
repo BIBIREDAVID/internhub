@@ -53,9 +53,21 @@ This is the prioritized list of work needed to turn the app into a more complete
 - [x] Password reset
   - Added `/forgot-password` (`src/pages/auth/ForgotPassword.jsx`) using Firebase Auth's `sendPasswordResetEmail`. Linked from the login page. Deliberately shows the same "check your inbox" message whether or not the email has an account, to avoid leaking which emails are registered.
 - [x] Resend invite
-  - **HR → Invites** now has a "Resend" button per pending invite: it bumps `invitedAt`/`invitedBy` on the existing invite doc and copies ready-to-send sign-up instructions to the clipboard (there's no email backend, so HR pastes them into an email/Slack message themselves). Each row also shows "Invited Xm/h/d ago" so stale invites are easy to spot.
+  - **HR → Invites** now has a "Resend" button per pending invite: it bumps `invitedAt`/`invitedBy`/`expiresAt` on the existing invite doc and copies ready-to-send sign-up instructions to the clipboard (there's no email backend, so HR pastes them into an email/Slack message themselves). Each row also shows "Invited Xm/h/d ago" so stale invites are easy to spot.
+- [x] Invite expiry
+  - Invites now carry `expiresAt` (7 days from send/resend). Enforced in `firestore.rules` (`hasMatchingInvite()` checks `expiresAt > request.time`), not just hidden in the UI — a leaked invite email stops working on its own after a week. `Signup.jsx` checks expiry client-side too and cleans up the orphaned Firebase Auth account if the invite has lapsed.
+- [x] Audit log
+  - Added `activityLog` collection (HR-only read/create, rules block update/delete entirely) and `src/utils/activityLog.js`. Logs manager reassignment (`HRInterns`), application status changes (`HRApplications`), and invite send/resend/cancel (`HRInvites`). Viewable at **HR → Activity Log** (`src/pages/hr/HRActivityLog.jsx`).
+- [x] Bulk actions
+  - **HR → Applications**: select multiple, bulk shortlist/reject. **HR → All Interns**: select multiple, bulk-assign (or unassign) a manager. Both use `Promise.allSettled` and report partial failures rather than silently dropping them.
+- [x] Manager reassignment guardrail
+  - `firestore.rules` now rejects any HR write to `users/{uid}.managerId` unless it's `null` or points to a user that still has `role == "manager"` — closes the gap where a manager's role changes (or the doc is deleted) but interns still point at them. `HRInterns` also flags existing interns whose `managerId` no longer resolves to an active manager ("Assigned manager no longer has manager access").
+- [ ] Real email delivery
+  - Deliberately skipped — needs a Blaze-plan Cloud Function plus a mail provider (SendGrid/Resend) and its API key, which requires an account/billing decision only the project owner can make. Invites and password resets both work today; invites just require HR to paste the copied text somewhere instead of it being emailed automatically.
+- [x] Rate-limit messaging
+  - Login, Signup, and Forgot Password all now show a specific "Too many attempts, wait a few minutes" message for Firebase Auth's `auth/too-many-requests` instead of a generic error — Firebase Auth already throttles repeated attempts server-side; this just surfaces it clearly instead of confusing users with "something went wrong."
 
 ## Notes
 
 - `src/index.css` had unused Vite-template CSS (`#root` capped at 1126px, centered, bordered) that fought the app's actual full-height sidebar layout — removed along with the dead `App.css` and unused template assets (`react.svg`, `vite.svg`, `hero.png`).
-- Everything on this list is now done. Future work (invite expiry, real email delivery, admin audit log, etc.) should get its own tracking rather than reusing this file.
+- Everything on this list is done except real email delivery, which needs an owner decision on billing/mail provider before it can be built. Future work should get its own tracking rather than reusing this file.

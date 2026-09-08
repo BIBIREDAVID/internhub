@@ -43,7 +43,14 @@ service cloud.firestore {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/invites/$(myEmail())) &&
         inviteDoc().data.role == request.resource.data.role &&
-        request.resource.data.email.lower() == myEmail();
+        request.resource.data.email.lower() == myEmail() &&
+        inviteDoc().data.expiresAt > request.time;
+    }
+
+    function isActiveManager(managerId) {
+      return managerId == null ||
+        (exists(/databases/$(database)/documents/users/$(managerId)) &&
+          userDoc(managerId).data.role == "manager");
     }
 
     // ---- users ----
@@ -62,7 +69,7 @@ service cloud.firestore {
       allow create: if isHR() || (isSignedIn() && request.auth.uid == userId && hasMatchingInvite());
       allow delete: if isHR();
 
-      allow update: if isHR() || (
+      allow update: if (isHR() && isActiveManager(request.resource.data.managerId)) || (
         isSignedIn() && request.auth.uid == userId &&
         request.resource.data.role == resource.data.role &&
         request.resource.data.managerId == resource.data.managerId &&
@@ -129,6 +136,14 @@ service cloud.firestore {
     // HR-managed recruitment pipeline. No public write path from this app.
     match /applications/{applicationId} {
       allow read, write: if isHR();
+    }
+
+    // ---- activityLog ----
+    // Append-only audit trail of HR actions. Doc: { action, actorId, actorEmail,
+    // targetType, targetId, details, createdAt }. Never updated or deleted.
+    match /activityLog/{entryId} {
+      allow read, create: if isHR();
+      allow update, delete: if false;
     }
   }
 }

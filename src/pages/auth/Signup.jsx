@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import { auth, db } from "../../firebase";
@@ -46,6 +46,8 @@ export default function Signup() {
         setError("Password is too weak. Use at least 8 characters.");
       } else if (err.code === "auth/invalid-email") {
         setError("Enter a valid email address.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many attempts. Please wait a few minutes and try again.");
       } else {
         setError("Something went wrong creating your account. Please try again.");
       }
@@ -53,8 +55,10 @@ export default function Signup() {
       return;
     }
 
+    const inviteRef = doc(db, "invites", normalizedEmail);
+    let invite;
+
     try {
-      const inviteRef = doc(db, "invites", normalizedEmail);
       const inviteSnap = await getDoc(inviteRef);
 
       if (!inviteSnap.exists()) {
@@ -64,8 +68,23 @@ export default function Signup() {
         return;
       }
 
-      const invite = inviteSnap.data();
+      invite = inviteSnap.data();
+      const expiresAt = invite.expiresAt?.toDate ? invite.expiresAt.toDate() : new Date(invite.expiresAt);
+      if (invite.expiresAt && expiresAt.getTime() < Date.now()) {
+        await credential.user.delete();
+        setError("This invitation has expired. Ask HR to resend it.");
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.error("Invite lookup error:", err);
+      await credential.user.delete().catch(() => {});
+      setError("Couldn't verify your invitation. Please try again.");
+      setLoading(false);
+      return;
+    }
 
+    try {
       await setDoc(doc(db, "users", credential.user.uid), {
         email: normalizedEmail,
         name: invite.name || "",
@@ -75,17 +94,24 @@ export default function Signup() {
         onboardingStep: 0,
         createdAt: new Date().toISOString(),
       });
-
-      await deleteDoc(inviteRef);
-      await refreshUserRole();
-
-      navigate(dashboardByRole[invite.role] || "/login");
     } catch (err) {
-      console.error("Signup provisioning error:", err);
-      setError("Your account was created but we couldn't finish setup. Contact HR.");
-      await signOut(auth).catch(() => {});
+      console.error("Account provisioning error:", err);
+      await credential.user.delete().catch(() => {});
+      setError("Couldn't finish setting up your account (the invite may have just expired). Ask HR to resend it and try again.");
       setLoading(false);
+      return;
     }
+
+    try {
+      await deleteDoc(inviteRef);
+    } catch (err) {
+      // The account is provisioned; a stale invite doc left behind is
+      // harmless (it just can't be redeemed again) — not worth failing over.
+      console.warn("Couldn't clean up invite after signup:", err);
+    }
+
+    await refreshUserRole();
+    navigate(dashboardByRole[invite.role] || "/login");
   }
 
   return (

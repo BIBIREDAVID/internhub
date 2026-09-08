@@ -3,12 +3,13 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, notifySuccess, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
 import ApplicationDetailModal from "./components/ApplicationDetailModal";
+import { logActivity } from "../../utils/activityLog";
 
 const statuses = ["all", "new", "shortlisted", "rejected", "hired"];
 
@@ -16,6 +17,7 @@ export default function HRApplications() {
   const { currentUser } = useAuth();
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
+  const [checked, setChecked] = useState(new Set());
 
   const { docs: applications, loading, hasMore, loadMore } = usePaginatedCollection(
     "applications",
@@ -29,18 +31,60 @@ export default function HRApplications() {
     [applications, filter]
   );
 
+  async function updateApplicationStatus(applicationId, nextStatus, applicantName) {
+    await updateDoc(doc(db, "applications", applicationId), {
+      status: nextStatus,
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: currentUser.uid,
+    });
+    logActivity({
+      actor: currentUser,
+      action: "application_status_change",
+      targetType: "application",
+      targetId: applicationId,
+      details: { applicantName, status: nextStatus },
+    });
+  }
+
   async function updateApplication(applicationId, nextStatus) {
     try {
-      await updateDoc(doc(db, "applications", applicationId), {
-        status: nextStatus,
-        reviewedAt: new Date().toISOString(),
-        reviewedBy: currentUser.uid,
-      });
+      const applicant = applications.find((application) => application.id === applicationId);
+      await updateApplicationStatus(applicationId, nextStatus, applicant?.name);
       setSelected((current) => (current?.id === applicationId ? null : current));
     } catch (error) {
       console.error("Update application error:", error);
       notifyError(friendlyFirestoreError(error, "Couldn't update the application. Please try again."));
     }
+  }
+
+  function toggleChecked(applicationId) {
+    setChecked((current) => {
+      const next = new Set(current);
+      if (next.has(applicationId)) next.delete(applicationId);
+      else next.add(applicationId);
+      return next;
+    });
+  }
+
+  async function applyBulkStatus(nextStatus) {
+    if (checked.size === 0) {
+      notifyError("Select at least one application first.");
+      return;
+    }
+    const ids = [...checked];
+    const results = await Promise.allSettled(
+      ids.map((id) => {
+        const applicant = applications.find((application) => application.id === id);
+        return updateApplicationStatus(id, nextStatus, applicant?.name);
+      })
+    );
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed === 0) {
+      notifySuccess(`Marked ${ids.length} application${ids.length === 1 ? "" : "s"} as ${nextStatus}.`);
+    } else {
+      notifyError(`${failed} of ${ids.length} updates failed. Please retry those.`);
+    }
+    setChecked(new Set());
   }
 
   const counts = useMemo(() => {
@@ -77,6 +121,15 @@ export default function HRApplications() {
         ]}
       />
 
+      {checked.size > 0 && (
+        <div style={styles.bulkBar}>
+          <span style={styles.bulkLabel}>{checked.size} selected</span>
+          <button onClick={() => applyBulkStatus("shortlisted")} style={styles.bulkShortlistBtn}>Shortlist selected</button>
+          <button onClick={() => applyBulkStatus("rejected")} style={styles.bulkRejectBtn}>Reject selected</button>
+          <button onClick={() => setChecked(new Set())} style={styles.bulkClearBtn}>Clear</button>
+        </div>
+      )}
+
       <div style={styles.toolbar}>
         {statuses.map((status) => (
           <button
@@ -102,6 +155,12 @@ export default function HRApplications() {
           ) : (
             visibleApplications.map((application) => (
               <div key={application.id} style={styles.row}>
+                <input
+                  type="checkbox"
+                  checked={checked.has(application.id)}
+                  onChange={() => toggleChecked(application.id)}
+                  style={styles.checkbox}
+                />
                 <div style={styles.avatar}>{application.name?.[0]?.toUpperCase() || "A"}</div>
                 <div style={styles.rowMain}>
                   <div style={styles.rowHeader}>
@@ -151,6 +210,12 @@ const styles = {
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" },
   title: { fontSize: "22px", fontWeight: "700", margin: 0 },
   sub: { color: theme.faint, fontSize: "13px", marginTop: "4px" },
+  bulkBar: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: "10px", padding: "12px 14px", marginBottom: "16px" },
+  bulkLabel: { color: theme.text, fontSize: "13px", fontWeight: "600" },
+  bulkShortlistBtn: { padding: "8px 14px", borderRadius: "8px", border: "1px solid #22c55e", background: theme.successSoft, color: "#fff", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
+  bulkRejectBtn: { padding: "8px 14px", borderRadius: "8px", border: "1px solid #ef4444", background: "#7f1d1d", color: "#fff", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
+  bulkClearBtn: { padding: "8px 14px", borderRadius: "8px", border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, fontSize: "13px", cursor: "pointer" },
+  checkbox: { marginTop: "12px", width: "16px", height: "16px", flexShrink: 0, cursor: "pointer" },
   toolbar: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px" },
   filterBtn: { borderRadius: "999px", border: "1px solid", padding: "8px 14px", fontSize: "13px", cursor: "pointer" },
   card: { background: theme.surface, borderRadius: "12px", padding: "20px", border: `1px solid ${theme.border}` },

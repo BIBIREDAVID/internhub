@@ -6,8 +6,10 @@ import Layout from "../../components/Layout";
 import { notifyError, notifySuccess, friendlyFirestoreError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { PageSkeleton } from "../../components/Skeleton";
+import { logActivity } from "../../utils/activityLog";
 
 const emptyForm = { email: "", name: "", role: "intern", managerId: "" };
+const INVITE_LIFETIME_DAYS = 7;
 
 function relativeTime(isoString) {
   if (!isoString) return "unknown";
@@ -19,6 +21,28 @@ function relativeTime(isoString) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function toDate(value) {
+  if (!value) return null;
+  return typeof value.toDate === "function" ? value.toDate() : new Date(value);
+}
+
+function isExpired(invite) {
+  const expiresAt = toDate(invite.expiresAt);
+  return expiresAt ? expiresAt.getTime() < Date.now() : false;
+}
+
+function nextExpiry() {
+  return new Date(Date.now() + INVITE_LIFETIME_DAYS * 86400000);
+}
+
+function expiryLabel(invite) {
+  const expiresAt = toDate(invite.expiresAt);
+  if (!expiresAt) return "No expiry set";
+  if (isExpired(invite)) return "Expired — resend to reactivate";
+  const days = Math.ceil((expiresAt.getTime() - Date.now()) / 86400000);
+  return days <= 1 ? "Expires today" : `Expires in ${days} days`;
 }
 
 export default function HRInvites() {
@@ -76,6 +100,7 @@ export default function HRInvites() {
 
     setSaving(true);
     try {
+      const expiresAt = nextExpiry();
       await setDoc(doc(db, "invites", email), {
         email,
         name,
@@ -83,6 +108,14 @@ export default function HRInvites() {
         managerId: form.role === "intern" && form.managerId ? form.managerId : null,
         invitedBy: currentUser.uid,
         invitedAt: new Date().toISOString(),
+        expiresAt,
+      });
+      logActivity({
+        actor: currentUser,
+        action: "invite_sent",
+        targetType: "invite",
+        targetId: email,
+        details: { role: form.role },
       });
       notifySuccess(`Invite sent for ${email}.`);
       setForm(emptyForm);
@@ -97,6 +130,7 @@ export default function HRInvites() {
   async function cancelInvite(email) {
     try {
       await deleteDoc(doc(db, "invites", email));
+      logActivity({ actor: currentUser, action: "invite_cancelled", targetType: "invite", targetId: email });
       notifySuccess("Invite cancelled.");
     } catch (error) {
       console.error("Cancel invite error:", error);
@@ -106,10 +140,13 @@ export default function HRInvites() {
 
   async function resendInvite(invite) {
     try {
+      const expiresAt = nextExpiry();
       await updateDoc(doc(db, "invites", invite.id), {
         invitedAt: new Date().toISOString(),
         invitedBy: currentUser.uid,
+        expiresAt,
       });
+      logActivity({ actor: currentUser, action: "invite_resent", targetType: "invite", targetId: invite.id });
 
       const instructions = `You've been invited to InternHub as ${invite.role === "hr" ? "an" : "a"} ${invite.role}. Sign up at ${window.location.origin}/signup using this email: ${invite.email}`;
 
@@ -215,6 +252,9 @@ export default function HRInvites() {
                     <div style={styles.rowTitle}>{invite.name || "Unnamed"}</div>
                     <div style={styles.rowMeta}>{invite.email} · {invite.role}</div>
                     <div style={styles.rowMeta}>Invited {relativeTime(invite.invitedAt)}</div>
+                    <div style={{ ...styles.rowMeta, color: isExpired(invite) ? theme.danger : theme.faint }}>
+                      {expiryLabel(invite)}
+                    </div>
                   </div>
                   <div style={styles.rowActions}>
                     <button onClick={() => resendInvite(invite)} style={styles.resendBtn}>Resend</button>
