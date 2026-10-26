@@ -2,25 +2,15 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { AuthProvider } from "./AuthContext";
 import { useAuth } from "./useAuth";
+import { api } from "../api";
 
-let authStateCallback;
-const mockGetDoc = vi.fn();
-
-vi.mock("firebase/auth", () => ({
-  onAuthStateChanged: (auth, callback) => {
-    authStateCallback = callback;
-    return () => {};
+vi.mock("../api", () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
   },
-}));
-
-vi.mock("firebase/firestore", () => ({
-  doc: (...args) => args,
-  getDoc: (...args) => mockGetDoc(...args),
-}));
-
-vi.mock("../firebase", () => ({
-  auth: { currentUser: null },
-  db: {},
 }));
 
 function Consumer() {
@@ -35,43 +25,38 @@ function Consumer() {
 }
 
 beforeEach(() => {
-  authStateCallback = undefined;
-  mockGetDoc.mockReset();
+  api.get.mockReset();
 });
 
 describe("AuthContext", () => {
   it("has no user and no role when signed out", async () => {
+    api.get.mockRejectedValue(Object.assign(new Error("Not authenticated"), { status: 401 }));
+
     render(
       <AuthProvider>
         <Consumer />
       </AuthProvider>
     );
-
-    await waitFor(() => expect(authStateCallback).toBeDefined());
-    await authStateCallback(null);
 
     await waitFor(() => expect(screen.getByText("user: none")).toBeInTheDocument());
     expect(screen.getByText("role: none")).toBeInTheDocument();
   });
 
-  it("resolves the role from the user's Firestore doc when signed in", async () => {
-    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({ role: "manager" }) });
+  it("resolves the role from /auth/me when signed in", async () => {
+    api.get.mockResolvedValue({ uid: "manager-1", role: "manager" });
 
     render(
       <AuthProvider>
         <Consumer />
       </AuthProvider>
     );
-
-    await waitFor(() => expect(authStateCallback).toBeDefined());
-    await authStateCallback({ uid: "manager-1" });
 
     await waitFor(() => expect(screen.getByText("user: manager-1")).toBeInTheDocument());
     expect(screen.getByText("role: manager")).toBeInTheDocument();
   });
 
-  it("treats a missing users/{uid} doc as no role, not a crash", async () => {
-    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => undefined });
+  it("treats a failed /auth/me lookup as no user, not a crash", async () => {
+    api.get.mockRejectedValue(Object.assign(new Error("Not authenticated"), { status: 401 }));
 
     render(
       <AuthProvider>
@@ -79,10 +64,7 @@ describe("AuthContext", () => {
       </AuthProvider>
     );
 
-    await waitFor(() => expect(authStateCallback).toBeDefined());
-    await authStateCallback({ uid: "ghost-1" });
-
-    await waitFor(() => expect(screen.getByText("user: ghost-1")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("user: none")).toBeInTheDocument());
     expect(screen.getByText("role: none")).toBeInTheDocument();
   });
 });

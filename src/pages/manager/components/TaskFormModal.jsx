@@ -11,7 +11,7 @@ export default function TaskFormModal({ interns, selectedInternId, onSelectInter
           <select value={selectedInternId} onChange={(event) => onSelectIntern(event.target.value)} style={styles.input}>
             <option value="">Choose an intern</option>
             {interns.map((intern) => (
-              <option key={intern.id} value={intern.id}>{intern.name || intern.email}</option>
+              <option key={intern.uid} value={intern.uid}>{intern.name || intern.email}</option>
             ))}
           </select>
         </div>
@@ -30,7 +30,7 @@ export default function TaskFormModal({ interns, selectedInternId, onSelectInter
         <div style={styles.grid}>
           <div style={styles.field}>
             <label style={styles.label}>Due Date</label>
-            <input type="date" value={form.dueDate} onChange={(event) => onChangeForm({ ...form, dueDate: event.target.value })} style={styles.input} />
+            <input type="date" value={form.due_date} onChange={(event) => onChangeForm({ ...form, due_date: event.target.value })} style={styles.input} />
           </div>
           <div style={styles.field}>
             <label style={styles.label}>Priority</label>

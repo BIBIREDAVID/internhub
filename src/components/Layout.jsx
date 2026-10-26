@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
 import { useAuth } from "../contexts/useAuth";
-import { useTheme } from "../contexts/useTheme";
 import Toaster from "./Toaster";
 import { theme } from "../theme";
 
@@ -50,8 +47,7 @@ const navItems = {
 };
 
 export default function Layout({ children, topbarActions, pageTitle }) {
-  const { currentUser, userRole } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { currentUser, userRole, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -60,7 +56,7 @@ export default function Layout({ children, topbarActions, pageTitle }) {
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   async function handleLogout() {
-    await signOut(auth);
+    await logout();
     navigate("/login");
   }
 
@@ -129,10 +125,10 @@ export default function Layout({ children, topbarActions, pageTitle }) {
         {/* User */}
         <div style={{ ...s.userWrap, borderTop: `1px solid ${theme.border}` }}>
           <div style={{ ...s.userAvatar, background: theme.primary }}>
-            {currentUser?.email?.[0]?.toUpperCase()}
+            {(currentUser?.name || currentUser?.email)?.[0]?.toUpperCase()}
           </div>
           <div style={s.userInfo}>
-            <div style={{ ...s.userName, color: theme.text }}>{currentUser?.email?.split("@")[0]}</div>
+            <div style={{ ...s.userName, color: theme.text }}>{currentUser?.name || currentUser?.email?.split("@")[0]}</div>
             <div style={{ ...s.userRole, color: theme.muted }}>{userRole === "hr" ? "HR Manager" : userRole === "manager" ? "Team Manager" : "Intern"}</div>
           </div>
           <button onClick={handleLogout} style={{ ...s.logoutBtn, color: theme.muted }} title="Logout">⏻</button>
@@ -152,13 +148,6 @@ export default function Layout({ children, topbarActions, pageTitle }) {
             <h1 style={{ ...s.pageTitle, color: theme.text }}>{currentLabel}</h1>
           </div>
           <div style={s.topbarRight}>
-            <button
-              onClick={toggleTheme}
-              style={{ ...s.themeBtn, background: theme.bg, color: theme.muted, border: `1px solid ${theme.border}` }}
-              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDark ? "☀️" : "🌙"}
-            </button>
             {topbarActions}
           </div>
         </div>
@@ -200,6 +189,5 @@ const s = {
   menuBtn: { background: "transparent", border: "none", fontSize: "20px", cursor: "pointer", padding: "4px", lineHeight: 1 },
   pageTitle: { fontSize: "18px", fontWeight: "600", margin: 0 },
   topbarRight: { display: "flex", alignItems: "center", gap: "10px" },
-  themeBtn: { borderRadius: "8px", padding: "6px 10px", cursor: "pointer", fontSize: "14px" },
   content: { flex: 1, overflow: "auto", padding: "24px" },
 };

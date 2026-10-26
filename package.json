@@ -5,15 +5,25 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.js",
     "build": "vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "seed": "node scripts/seed.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:migrate": "node scripts/db/migrate.js",
+    "db:reports": "node scripts/db/reports.js"
   },
   "dependencies": {
-    "firebase": "^12.14.0",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.13.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.17.0"
@@ -29,7 +39,6 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "firebase-admin": "^14.3.0",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "vite": "^8.0.12",

@@ -15,8 +15,8 @@ export default function WeeklyDigest({ interns, tasks, attendance }) {
 
   const overdueTasks = useMemo(() => {
     return tasks
-      .filter((task) => task.status !== "completed" && task.dueDate && task.dueDate < today)
-      .map((task) => ({ ...task, intern: interns.find((i) => i.id === task.internId) }));
+      .filter((task) => task.status !== "completed" && task.due_date && task.due_date < today)
+      .map((task) => ({ ...task, intern: interns.find((i) => i.uid === task.intern_id) }));
   }, [tasks, interns, today]);
 
   const dueSoonTasks = useMemo(() => {
@@ -24,7 +24,7 @@ export default function WeeklyDigest({ interns, tasks, attendance }) {
     weekAhead.setDate(weekAhead.getDate() + 7);
     const weekAheadKey = weekAhead.toISOString().slice(0, 10);
     return tasks.filter(
-      (task) => task.status !== "completed" && task.dueDate && task.dueDate >= today && task.dueDate <= weekAheadKey
+      (task) => task.status !== "completed" && task.due_date && task.due_date >= today && task.due_date <= weekAheadKey
     );
   }, [tasks, today]);
 
@@ -32,10 +32,10 @@ export default function WeeklyDigest({ interns, tasks, attendance }) {
     const start = weekStart();
     return interns.filter((intern) => {
       const recent = attendance.filter(
-        (record) => record.internId === intern.id && new Date(`${record.date}T00:00:00`) >= start
+        (record) => record.intern_id === intern.uid && new Date(`${record.date}T00:00:00`) >= start
       );
       const absences = recent.filter((record) => record.status === "absent").length;
-      const noRecordToday = !attendance.some((record) => record.internId === intern.id && record.date === today);
+      const noRecordToday = !attendance.some((record) => record.intern_id === intern.uid && record.date === today);
       return absences > 0 || noRecordToday;
     });
   }, [interns, attendance, today]);
@@ -59,9 +59,9 @@ export default function WeeklyDigest({ interns, tasks, attendance }) {
           ) : (
             <ul style={styles.list}>
               {overdueTasks.slice(0, 5).map((task) => (
-                <li key={task.id} style={styles.item}>
+                <li key={task.task_id} style={styles.item}>
                   <span style={styles.itemTitle}>{task.title}</span>
-                  <span style={styles.itemMeta}>{task.intern?.name || "Unknown"} · was due {task.dueDate}</span>
+                  <span style={styles.itemMeta}>{task.intern?.name || "Unknown"} · was due {task.due_date}</span>
                 </li>
               ))}
             </ul>
@@ -77,9 +77,9 @@ export default function WeeklyDigest({ interns, tasks, attendance }) {
           ) : (
             <ul style={styles.list}>
               {dueSoonTasks.slice(0, 5).map((task) => (
-                <li key={task.id} style={styles.item}>
+                <li key={task.task_id} style={styles.item}>
                   <span style={styles.itemTitle}>{task.title}</span>
-                  <span style={styles.itemMeta}>Due {task.dueDate}</span>
+                  <span style={styles.itemMeta}>Due {task.due_date}</span>
                 </li>
               ))}
             </ul>
@@ -95,7 +95,7 @@ export default function WeeklyDigest({ interns, tasks, attendance }) {
           ) : (
             <ul style={styles.list}>
               {attendanceGaps.slice(0, 5).map((intern) => (
-                <li key={intern.id} style={styles.item}>
+                <li key={intern.uid} style={styles.item}>
                   <span style={styles.itemTitle}>{intern.name || "Unnamed intern"}</span>
                   <span style={styles.itemMeta}>Absence or no check-in today</span>
                 </li>

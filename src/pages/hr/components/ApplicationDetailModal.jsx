@@ -6,8 +6,8 @@ export default function ApplicationDetailModal({ application, onClose, onUpdateS
       <div style={styles.modal}>
         <div style={styles.modalHeader}>
           <div>
-            <h3 style={styles.modalTitle}>{application.name || "Applicant"}</h3>
-            <p style={styles.modalSub}>{application.email || "No email provided"}</p>
+            <h3 style={styles.modalTitle}>{application.candidate_name || "Applicant"}</h3>
+            <p style={styles.modalSub}>{application.candidate_email || "No email provided"}</p>
           </div>
           <button onClick={onClose} style={styles.closeBtn}>×</button>
         </div>
@@ -18,8 +18,8 @@ export default function ApplicationDetailModal({ application, onClose, onUpdateS
             <div style={styles.detailValue}>{application.department || "Not set"}</div>
           </div>
           <div>
-            <div style={styles.detailLabel}>Cohort</div>
-            <div style={styles.detailValue}>{application.cohortId || "Not set"}</div>
+            <div style={styles.detailLabel}>Stage</div>
+            <div style={styles.detailValue}>{application.stage || "Not set"}</div>
           </div>
           <div>
             <div style={styles.detailLabel}>Status</div>
@@ -27,18 +27,13 @@ export default function ApplicationDetailModal({ application, onClose, onUpdateS
           </div>
           <div>
             <div style={styles.detailLabel}>Created</div>
-            <div style={styles.detailValue}>{application.createdAt || "Unknown"}</div>
+            <div style={styles.detailValue}>{application.created_at ? new Date(application.created_at).toLocaleString() : "Unknown"}</div>
           </div>
         </div>
 
-        <div style={styles.noteBox}>
-          <div style={styles.detailLabel}>Notes</div>
-          <div style={styles.noteText}>{application.notes || "No notes attached."}</div>
-        </div>
-
         <div style={styles.modalBtns}>
-          <button onClick={() => onUpdateStatus(application.id, "shortlisted")} style={styles.shortlistBtn}>Shortlist</button>
-          <button onClick={() => onUpdateStatus(application.id, "rejected")} style={styles.rejectBtn}>Reject</button>
+          <button onClick={() => onUpdateStatus(application.application_id, "shortlisted")} style={styles.shortlistBtn}>Shortlist</button>
+          <button onClick={() => onUpdateStatus(application.application_id, "rejected")} style={styles.rejectBtn}>Reject</button>
         </div>
       </div>
     </div>

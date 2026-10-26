@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
-import { db } from "../../firebase";
-import { useAuth } from "../../contexts/useAuth";
+import { api } from "../../api";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
@@ -15,7 +13,6 @@ function displayTime(isoString) {
 }
 
 export default function ManagerAttendance() {
-  const { currentUser } = useAuth();
   const [interns, setInterns] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,84 +21,63 @@ export default function ManagerAttendance() {
   const [draftComments, setDraftComments] = useState({});
 
   useEffect(() => {
-    if (!currentUser) return;
-
-    const internsQuery = query(collection(db, "users"), where("managerId", "==", currentUser.uid));
-
-    const unsubInterns = onSnapshot(
-      internsQuery,
-      (snapshot) => {
-        setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Interns load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load your interns."));
-        setLoading(false);
-      }
-    );
-
-    const unsubAttendance = onSnapshot(
-      collection(db, "attendance"),
-      (snapshot) => {
-        setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
+    let cancelled = false;
+    Promise.all([api.get("/users"), api.get("/attendance")])
+      .then(([internsData, attendanceData]) => {
+        if (cancelled) return;
+        setInterns(internsData);
+        setAttendance(attendanceData);
+      })
+      .catch((error) => {
         console.error("Attendance load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load attendance."));
-      }
-    );
-
+        notifyError(friendlyApiError(error, "Couldn't load attendance."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      unsubInterns();
-      unsubAttendance();
+      cancelled = true;
     };
-  }, [currentUser]);
+  }, []);
 
-  const internIds = useMemo(() => new Set(interns.map((intern) => intern.id)), [interns]);
   const today = new Date().toISOString().slice(0, 10);
 
   const visibleRecords = useMemo(() => {
     return attendance
-      .filter((record) => internIds.has(record.internId))
       .filter((record) => {
         if (filter !== "all" && record.status !== filter) return false;
-        const intern = interns.find((item) => item.id === record.internId);
+        const intern = interns.find((item) => item.uid === record.intern_id);
         const searchText = `${intern?.name || ""} ${intern?.email || ""} ${record.date || ""}`.toLowerCase();
         return searchText.includes(search.toLowerCase());
       })
       .sort((left, right) => new Date(`${right.date}T00:00:00`) - new Date(`${left.date}T00:00:00`));
-  }, [attendance, filter, internIds, interns, search]);
+  }, [attendance, filter, interns, search]);
 
   const stats = useMemo(() => {
     const todaysRecords = visibleRecords.filter((record) => record.date === today);
     const present = todaysRecords.filter((record) => record.status === "present").length;
     const late = todaysRecords.filter((record) => record.status === "late").length;
-    const comments = visibleRecords.filter((record) => record.managerComment).length;
+    const comments = visibleRecords.filter((record) => record.manager_comment).length;
     return { present, late, comments };
   }, [today, visibleRecords]);
 
   async function saveComment(recordId, managerComment) {
     try {
-      await updateDoc(doc(db, "attendance", recordId), {
-        managerComment,
-        managerCommentUpdatedAt: new Date().toISOString(),
-      });
+      const updated = await api.patch(`/attendance/${recordId}`, { manager_comment: managerComment });
+      setAttendance((current) => current.map((record) => (record.attendance_id === recordId ? updated : record)));
     } catch (error) {
       console.error("Save comment error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't save the comment. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't save the comment. Please try again."));
     }
   }
 
   async function updateStatus(recordId, status) {
     try {
-      await updateDoc(doc(db, "attendance", recordId), {
-        status,
-        reviewedByManagerAt: new Date().toISOString(),
-      });
+      const updated = await api.patch(`/attendance/${recordId}`, { status });
+      setAttendance((current) => current.map((record) => (record.attendance_id === recordId ? updated : record)));
     } catch (error) {
       console.error("Update attendance status error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't update the status. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't update the status. Please try again."));
     }
   }
 
@@ -161,21 +137,21 @@ export default function ManagerAttendance() {
             <p style={styles.empty}>No attendance records match this filter.</p>
           ) : (
             visibleRecords.map((record) => {
-              const intern = interns.find((item) => item.id === record.internId);
+              const intern = interns.find((item) => item.uid === record.intern_id);
               return (
-                <div key={record.id} style={styles.row}>
+                <div key={record.attendance_id} style={styles.row}>
                   <div style={styles.rowMain}>
                     <div style={styles.rowHeader}>
                       <div>
                         <div style={styles.rowTitle}>{intern?.name || "Unknown intern"}</div>
                         <div style={styles.rowMeta}>
-                          {record.date} · Check in {displayTime(record.checkIn)} · Check out {displayTime(record.checkOut)}
+                          {record.date} · Check in {displayTime(record.check_in)} · Check out {displayTime(record.check_out)}
                         </div>
                       </div>
                       <div style={styles.rowRight}>
                         <select
                           value={record.status || "present"}
-                          onChange={(event) => updateStatus(record.id, event.target.value)}
+                          onChange={(event) => updateStatus(record.attendance_id, event.target.value)}
                           style={{
                             ...styles.statusSelect,
                             background:
@@ -194,11 +170,11 @@ export default function ManagerAttendance() {
                     </div>
 
                     <textarea
-                      value={draftComments[record.id] ?? record.managerComment ?? ""}
+                      value={draftComments[record.attendance_id] ?? record.manager_comment ?? ""}
                       onChange={(event) =>
-                        setDraftComments((current) => ({ ...current, [record.id]: event.target.value }))
+                        setDraftComments((current) => ({ ...current, [record.attendance_id]: event.target.value }))
                       }
-                      onBlur={() => saveComment(record.id, draftComments[record.id] ?? record.managerComment ?? "")}
+                      onBlur={() => saveComment(record.attendance_id, draftComments[record.attendance_id] ?? record.manager_comment ?? "")}
                       placeholder="Add a manager comment..."
                       style={styles.commentBox}
                     />

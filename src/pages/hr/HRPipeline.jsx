@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import Layout from "../../components/Layout";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
@@ -13,19 +12,19 @@ export default function HRPipeline() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      query(collection(db, "applications")),
-      (snapshot) => {
-        setApplications(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Pipeline error:", error);
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
+    let cancelled = false;
+    api
+      .get("/applications")
+      .then((data) => {
+        if (!cancelled) setApplications(data);
+      })
+      .catch((error) => console.error("Pipeline error:", error))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const grouped = useMemo(() => {
@@ -78,12 +77,11 @@ export default function HRPipeline() {
                 <p style={styles.empty}>Nothing here yet.</p>
               ) : (
                 grouped[stage].map((application) => (
-                  <div key={application.id} style={styles.card}>
-                    <div style={styles.cardTitle}>{application.name || "Applicant"}</div>
-                    <div style={styles.cardMeta}>{application.department || "General"} · {application.email || "No email"}</div>
+                  <div key={application.application_id} style={styles.card}>
+                    <div style={styles.cardTitle}>{application.candidate_name || "Applicant"}</div>
+                    <div style={styles.cardMeta}>{application.department || "General"} · {application.candidate_email || "No email"}</div>
                     <div style={styles.cardTags}>
                       <span style={styles.tag}>{application.status || "new"}</span>
-                      <span style={styles.tag}>{application.cohortId || "No cohort"}</span>
                     </div>
                   </div>
                 ))

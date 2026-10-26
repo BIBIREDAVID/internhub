@@ -20,15 +20,14 @@ export function notifySuccess(message) {
   return emit({ type: "success", message });
 }
 
-const FRIENDLY_MESSAGES = {
-  "permission-denied": "You don't have permission to do that.",
-  unauthenticated: "Your session expired. Please sign in again.",
-  unavailable: "Network issue — please check your connection and try again.",
-  "not-found": "That record no longer exists.",
-  "resource-exhausted": "Too many requests. Please try again shortly.",
+const FRIENDLY_STATUS_MESSAGES = {
+  401: "Your session expired. Please sign in again.",
+  403: "You don't have permission to do that.",
+  404: "That record no longer exists.",
+  429: "Too many requests. Please try again shortly.",
 };
 
-export function friendlyFirestoreError(error, fallback = "Something went wrong. Please try again.") {
-  const code = (error?.code || "").replace(/^firestore\//, "");
-  return FRIENDLY_MESSAGES[code] || fallback;
+export function friendlyApiError(error, fallback = "Something went wrong. Please try again.") {
+  if (!error) return fallback;
+  return FRIENDLY_STATUS_MESSAGES[error.status] || error.message || fallback;
 }

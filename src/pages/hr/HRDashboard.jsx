@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
 import { theme } from "../../theme";
@@ -14,27 +13,19 @@ export default function HRDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribeUsers = onSnapshot(
-      collection(db, "users"),
-      (snapshot) => {
-        setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Users error:", error);
-        setLoading(false);
-      }
-    );
-
-    const unsubscribeTasks = onSnapshot(
-      collection(db, "tasks"),
-      (snapshot) => setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() }))),
-      (error) => console.error("Tasks error:", error)
-    );
-
+    let cancelled = false;
+    Promise.all([api.get("/users"), api.get("/tasks")])
+      .then(([usersData, tasksData]) => {
+        if (cancelled) return;
+        setUsers(usersData);
+        setTasks(tasksData);
+      })
+      .catch((error) => console.error("Dashboard load error:", error))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      unsubscribeUsers();
-      unsubscribeTasks();
+      cancelled = true;
     };
   }, []);
 
@@ -47,18 +38,18 @@ export default function HRDashboard() {
     today.setHours(0, 0, 0, 0);
 
     return tasks.filter((task) => {
-      if (!task.dueDate || task.status === "completed") {
+      if (!task.due_date || task.status === "completed") {
         return false;
       }
 
-      const dueDate = new Date(task.dueDate);
+      const dueDate = new Date(task.due_date);
       return !Number.isNaN(dueDate.getTime()) && dueDate < today;
     });
   }, [tasks]);
 
   const completionRate = tasks.length ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
   const recentTasks = [...tasks]
-    .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))
+    .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0))
     .slice(0, 5);
   const recentInterns = [...interns].slice(0, 5);
 
@@ -98,7 +89,7 @@ export default function HRDashboard() {
           ) : (
             <div style={styles.list}>
               {recentInterns.map((intern) => (
-                <div key={intern.id} style={styles.row}>
+                <div key={intern.uid} style={styles.row}>
                   <div style={styles.avatar}>{intern.name?.[0]?.toUpperCase() || "I"}</div>
                   <div style={styles.rowMain}>
                     <div style={styles.rowTitle}>{intern.name || "Unnamed intern"}</div>
@@ -106,7 +97,7 @@ export default function HRDashboard() {
                       {intern.department || "No department"} · {intern.email || "No email"}
                     </div>
                   </div>
-                  <div style={styles.pill}>{intern.cohortId ? `Cohort ${intern.cohortId}` : "Intern"}</div>
+                  <div style={styles.pill}>{intern.cohort_id ? `Cohort ${intern.cohort_id}` : "Intern"}</div>
                 </div>
               ))}
             </div>
@@ -120,14 +111,14 @@ export default function HRDashboard() {
           ) : (
             <div style={styles.list}>
               {recentTasks.map((task) => {
-                const intern = interns.find((user) => user.id === task.internId);
+                const intern = interns.find((user) => user.uid === task.intern_id);
                 return (
-                  <div key={task.id} style={styles.taskItem}>
+                  <div key={task.task_id} style={styles.taskItem}>
                     <div style={styles.taskTop}>
                       <div>
                         <div style={styles.rowTitle}>{task.title || "Untitled task"}</div>
                         <div style={styles.rowMeta}>
-                          {intern?.name || "Unknown intern"} · Due {task.dueDate || "unscheduled"}
+                          {intern?.name || "Unknown intern"} · Due {task.due_date || "unscheduled"}
                         </div>
                       </div>
                       <div
@@ -159,11 +150,11 @@ export default function HRDashboard() {
         ) : (
           <div style={styles.list}>
             {overdueTasks.map((task) => (
-              <div key={task.id} style={styles.row}>
+              <div key={task.task_id} style={styles.row}>
                 <div style={styles.avatar}>!</div>
                 <div style={styles.rowMain}>
                   <div style={styles.rowTitle}>{task.title || "Untitled task"}</div>
-                  <div style={styles.rowMeta}>Due date passed: {task.dueDate}</div>
+                  <div style={styles.rowMeta}>Due date passed: {task.due_date}</div>
                 </div>
               </div>
             ))}

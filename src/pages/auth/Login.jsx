@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
-import { auth, db } from "../../firebase";
+import { useAuth } from "../../contexts/useAuth";
 import { theme } from "../../theme";
 
 export default function Login() {
@@ -11,6 +9,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -18,30 +17,20 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Fetch role from Firestore
-      const docRef = doc(db, "users", result.user.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
-        setError("User record not found. Contact your administrator.");
-        setLoading(false);
-        return;
-      }
-
-      const role = docSnap.data().role;
+      const user = await login(email, password);
+      const role = user.role;
 
       // Redirect based on role
       if (role === "hr") navigate("/hr/dashboard");
       else if (role === "manager") navigate("/manager/dashboard");
       else if (role === "intern") navigate("/intern/dashboard");
       else setError("Unknown role. Contact your administrator.");
-
     } catch (err) {
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+      if (err.status === 401) {
         setError("Invalid email or password.");
-      } else if (err.code === "auth/too-many-requests") {
+      } else if (err.status === 403) {
+        setError(err.message || "Account deactivated.");
+      } else if (err.status === 429) {
         setError("Too many failed attempts. Please wait a few minutes and try again.");
       } else {
         setError("Something went wrong. Please try again.");

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "../../../firebase";
-import { notifyError, friendlyFirestoreError } from "../../../utils/toast";
+import { api } from "../../../api";
+import { notifyError, friendlyApiError } from "../../../utils/toast";
 
 export const onboardingSteps = [
   { id: "account_setup", label: "Account Setup", description: "Confirm your access details and contact info." },
@@ -16,7 +15,7 @@ export function useOnboardingChecklist(currentUser, profile) {
   const [saving, setSaving] = useState(false);
 
   const checklist = useMemo(() => {
-    const existing = Array.isArray(profile?.onboardingChecklist) ? profile.onboardingChecklist : null;
+    const existing = Array.isArray(profile?.onboarding_checklist) ? profile.onboarding_checklist : null;
     if (existing && existing.length === onboardingSteps.length) {
       return existing.map((item, index) => ({
         id: onboardingSteps[index].id,
@@ -27,7 +26,7 @@ export function useOnboardingChecklist(currentUser, profile) {
       }));
     }
 
-    const completedCount = profile?.onboardingStep ?? 0;
+    const completedCount = profile?.onboarding_step ?? 0;
     return onboardingSteps.map((step, index) => ({
       ...step,
       completed: index < completedCount,
@@ -53,13 +52,13 @@ export function useOnboardingChecklist(currentUser, profile) {
   async function persistChecklist(nextChecklist) {
     setSaving(true);
     try {
-      await setDoc(doc(db, "users", currentUser.uid), {
-        onboardingChecklist: nextChecklist,
-        onboardingStep: nextChecklist.filter((item) => item.completed).length,
-      }, { merge: true });
+      await api.patch(`/users/${currentUser.uid}`, {
+        onboarding_checklist: nextChecklist,
+        onboarding_step: nextChecklist.filter((item) => item.completed).length,
+      });
     } catch (error) {
       console.error("Onboarding save error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't save your progress. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't save your progress. Please try again."));
     } finally {
       setSaving(false);
     }

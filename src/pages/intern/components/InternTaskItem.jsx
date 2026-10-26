@@ -14,7 +14,7 @@ export default function InternTaskItem({ task, onChangeStatus }) {
         </div>
         <select
           value={task.status || "pending"}
-          onChange={(event) => onChangeStatus(task.id, event.target.value)}
+          onChange={(event) => onChangeStatus(task.task_id, event.target.value)}
           style={{
             ...styles.statusSelect,
             background:
@@ -28,15 +28,15 @@ export default function InternTaskItem({ task, onChangeStatus }) {
       </div>
 
       <div style={styles.taskBottom}>
-        <span style={styles.metaPill}>Due {task.dueDate || "unscheduled"}</span>
+        <span style={styles.metaPill}>Due {task.due_date || "unscheduled"}</span>
         <span style={styles.metaPill}>{task.priority || "medium"} priority</span>
-        {task.managerId && <span style={styles.metaPill}>Assigned by manager</span>}
+        {task.manager_id && <span style={styles.metaPill}>Assigned by manager</span>}
         <button onClick={() => setShowComments((current) => !current)} style={styles.commentsBtn}>
           {showComments ? "Hide comments" : "Comments"}
         </button>
       </div>
 
-      {showComments && <TaskComments taskId={task.id} />}
+      {showComments && <TaskComments taskId={task.task_id} />}
     </div>
   );
 }

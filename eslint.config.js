@@ -19,7 +19,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['*.config.js', 'e2e/**/*.js', 'scripts/**/*.js'],
+    files: ['*.config.js', 'e2e/**/*.js', 'scripts/**/*.js', 'server/**/*.js'],
     languageOptions: {
       globals: globals.node,
     },

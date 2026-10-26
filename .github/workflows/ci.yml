@@ -6,17 +6,7 @@ on:
   pull_request:
 
 env:
-  # Firebase client config isn't secret (it's shipped in the browser bundle
-  # either way), but CI has no .env — without these, firebase.js's getAuth()
-  # throws synchronously on the missing apiKey and crashes the whole app
-  # before React ever renders, taking every e2e test down with it. These
-  # are placeholders; e2e tests never make a real Firebase call.
-  VITE_FIREBASE_API_KEY: ci-placeholder-key
-  VITE_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
-  VITE_FIREBASE_PROJECT_ID: ci-placeholder
-  VITE_FIREBASE_STORAGE_BUCKET: ci-placeholder.firebasestorage.app
-  VITE_FIREBASE_MESSAGING_SENDER_ID: "000000000000"
-  VITE_FIREBASE_APP_ID: "1:000000000000:web:0000000000000000000000"
+  VITE_API_URL: http://localhost:4000
 
 jobs:
   build-lint-test:
@@ -44,6 +34,25 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: internhub
+          POSTGRES_PASSWORD: internhub
+          POSTGRES_DB: internhub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U internhub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://internhub:internhub@localhost:5432/internhub
+      JWT_SECRET: ci-test-secret-not-for-production
+      PORT: 4000
+      CORS_ORIGIN: http://localhost:4173
     steps:
       - uses: actions/checkout@v4
 
@@ -56,5 +65,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
 
       - run: npm run build
+
+      - run: npm run db:migrate
+
+      - run: npm run seed
 
       - run: npm run test:e2e

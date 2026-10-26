@@ -1,20 +1,19 @@
-import { where } from "firebase/firestore";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
 
 const steps = ["Setup", "Offer", "Manager Intro", "Orientation", "First Task"];
-const internConstraints = [where("role", "==", "intern")];
+const internParams = { role: "intern" };
 
 export default function HROnboarding() {
   const { docs: interns, loading, hasMore, loadMore } = usePaginatedCollection(
     "users",
-    internConstraints,
+    internParams,
     25,
-    (error) => notifyError(friendlyFirestoreError(error, "Couldn't load onboarding data."))
+    (error) => notifyError(friendlyApiError(error, "Couldn't load onboarding data."))
   );
 
   if (loading) {
@@ -37,9 +36,9 @@ export default function HROnboarding() {
       <StatsRow
         items={[
           { label: "Interns", value: interns.length, color: theme.primary },
-          { label: "Started", value: interns.filter((intern) => (intern.onboardingStep ?? 0) > 0).length, color: theme.success },
-          { label: "Midway", value: interns.filter((intern) => (intern.onboardingStep ?? 0) >= 2 && (intern.onboardingStep ?? 0) < 5).length, color: theme.warning },
-          { label: "Done", value: interns.filter((intern) => (intern.onboardingStep ?? 0) >= 5).length, color: theme.info },
+          { label: "Started", value: interns.filter((intern) => (intern.onboarding_step ?? 0) > 0).length, color: theme.success },
+          { label: "Midway", value: interns.filter((intern) => (intern.onboarding_step ?? 0) >= 2 && (intern.onboarding_step ?? 0) < 5).length, color: theme.warning },
+          { label: "Done", value: interns.filter((intern) => (intern.onboarding_step ?? 0) >= 5).length, color: theme.info },
         ]}
       />
 
@@ -50,11 +49,11 @@ export default function HROnboarding() {
             <p style={styles.empty}>No interns found.</p>
           ) : (
             interns.map((intern) => {
-              const currentStep = intern.onboardingStep ?? 0;
+              const currentStep = intern.onboarding_step ?? 0;
               const progressPct = Math.min(100, Math.round((currentStep / steps.length) * 100));
-              const documentStatus = intern.onboardingChecklist ? "Checklist ready" : "Legacy step count";
+              const documentStatus = intern.onboarding_checklist ? "Checklist ready" : "Legacy step count";
               return (
-                <div key={intern.id} style={styles.row}>
+                <div key={intern.uid} style={styles.row}>
                   <div style={styles.rowMain}>
                     <div style={styles.rowHeader}>
                       <div>
@@ -87,7 +86,7 @@ export default function HROnboarding() {
 
                     <div style={styles.docRow}>
                       <span style={styles.tag}>{documentStatus}</span>
-                      <span style={styles.tag}>{intern.onboardingChecklist ? "Documents tracked" : "Using onboardingStep"}</span>
+                      <span style={styles.tag}>{intern.onboarding_checklist ? "Documents tracked" : "Using onboarding_step"}</span>
                     </div>
                   </div>
                 </div>

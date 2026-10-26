@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { PageSkeleton } from "../../components/Skeleton";
 import { useOnboardingChecklist, onboardingSteps } from "./hooks/useOnboardingChecklist";
@@ -17,21 +16,22 @@ export default function InternOnboarding() {
 
   useEffect(() => {
     if (!currentUser) return;
-
-    const unsubscribe = onSnapshot(
-      doc(db, "users", currentUser.uid),
-      (snapshot) => {
-        setProfile(snapshot.exists() ? snapshot.data() : null);
-        setLoading(false);
-      },
-      (error) => {
+    let cancelled = false;
+    api
+      .get(`/users/${currentUser.uid}`)
+      .then((data) => {
+        if (!cancelled) setProfile(data);
+      })
+      .catch((error) => {
         console.error("Profile load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load your onboarding profile."));
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
+        notifyError(friendlyApiError(error, "Couldn't load your onboarding profile."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [currentUser]);
 
   const { steps, completedCount, progressPct, saving, toggleStep, completeNextStep, resetChecklist } =

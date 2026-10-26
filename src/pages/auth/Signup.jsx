@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
-import { auth, db } from "../../firebase";
 import { useAuth } from "../../contexts/useAuth";
 import { theme } from "../../theme";
 
@@ -16,10 +13,11 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { refreshUserRole } = useAuth();
+  const { signup } = useAuth();
 
   async function handleSignup(e) {
     e.preventDefault();
@@ -36,83 +34,23 @@ export default function Signup() {
 
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
-    let credential;
 
     try {
-      credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      const user = await signup(normalizedEmail, password, name);
+      navigate(dashboardByRole[user.role] || "/login");
     } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
+      if (err.status === 409) {
         setError("An account with this email already exists. Try signing in instead.");
-      } else if (err.code === "auth/weak-password") {
-        setError("Password is too weak. Use at least 8 characters.");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Enter a valid email address.");
-      } else if (err.code === "auth/too-many-requests") {
+      } else if (err.status === 400) {
+        setError(err.message || "No invitation found for this email. Ask HR to invite you first.");
+      } else if (err.status === 429) {
         setError("Too many attempts. Please wait a few minutes and try again.");
       } else {
         setError("Something went wrong creating your account. Please try again.");
       }
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const inviteRef = doc(db, "invites", normalizedEmail);
-    let invite;
-
-    try {
-      const inviteSnap = await getDoc(inviteRef);
-
-      if (!inviteSnap.exists()) {
-        await credential.user.delete();
-        setError("No invitation found for this email. Ask HR to invite you first.");
-        setLoading(false);
-        return;
-      }
-
-      invite = inviteSnap.data();
-      const expiresAt = invite.expiresAt?.toDate ? invite.expiresAt.toDate() : new Date(invite.expiresAt);
-      if (invite.expiresAt && expiresAt.getTime() < Date.now()) {
-        await credential.user.delete();
-        setError("This invitation has expired. Ask HR to resend it.");
-        setLoading(false);
-        return;
-      }
-    } catch (err) {
-      console.error("Invite lookup error:", err);
-      await credential.user.delete().catch(() => {});
-      setError("Couldn't verify your invitation. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await setDoc(doc(db, "users", credential.user.uid), {
-        email: normalizedEmail,
-        name: invite.name || "",
-        role: invite.role,
-        managerId: invite.managerId || null,
-        onboardingChecklist: [],
-        onboardingStep: 0,
-        createdAt: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error("Account provisioning error:", err);
-      await credential.user.delete().catch(() => {});
-      setError("Couldn't finish setting up your account (the invite may have just expired). Ask HR to resend it and try again.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await deleteDoc(inviteRef);
-    } catch (err) {
-      // The account is provisioned; a stale invite doc left behind is
-      // harmless (it just can't be redeemed again) — not worth failing over.
-      console.warn("Couldn't clean up invite after signup:", err);
-    }
-
-    await refreshUserRole();
-    navigate(dashboardByRole[invite.role] || "/login");
   }
 
   return (
@@ -124,6 +62,18 @@ export default function Signup() {
         {error && <div style={styles.error}>{error}</div>}
 
         <form onSubmit={handleSignup} style={styles.form}>
+          <div style={styles.field}>
+            <label style={styles.label}>Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={styles.input}
+              placeholder="Your full name"
+              required
+            />
+          </div>
+
           <div style={styles.field}>
             <label style={styles.label}>Email</label>
             <input

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { sendPasswordResetEmail } from "firebase/auth";
 import { Link } from "react-router-dom";
-import { auth } from "../../firebase";
 import { theme } from "../../theme";
+import { api } from "../../api";
+import { friendlyApiError } from "../../utils/toast";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -22,24 +22,13 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, normalizedEmail);
+      await api.post("/auth/forgot-password", { email: normalizedEmail });
+      setSent(true);
     } catch (err) {
-      // Don't reveal whether an account exists for this email — only surface
-      // errors that mean the request itself was malformed or blocked.
-      if (err.code === "auth/too-many-requests") {
-        setLoading(false);
-        setError("Too many requests. Please wait a few minutes and try again.");
-        return;
-      }
-      if (err.code !== "auth/user-not-found") {
-        setLoading(false);
-        setError("Something went wrong. Please try again.");
-        return;
-      }
+      setError(friendlyApiError(err));
+    } finally {
+      setLoading(false);
     }
-
-    setSent(true);
-    setLoading(false);
   }
 
   return (

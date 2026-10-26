@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../../firebase";
-import { notifyError, notifySuccess, friendlyFirestoreError } from "../../../utils/toast";
+import { api } from "../../../api";
+import { notifyError, notifySuccess, friendlyApiError } from "../../../utils/toast";
 import { theme } from "../../../theme";
 
 export default function ProfileDetailsCard({ currentUser, profile }) {
@@ -23,7 +22,7 @@ export default function ProfileDetailsCard({ currentUser, profile }) {
     }
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", currentUser.uid), {
+      await api.patch(`/users/${currentUser.uid}`, {
         name: name.trim(),
         department: department.trim(),
       });
@@ -31,7 +30,7 @@ export default function ProfileDetailsCard({ currentUser, profile }) {
       setEditing(false);
     } catch (error) {
       console.error("Profile update error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't save your profile. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't save your profile. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -79,15 +78,15 @@ export default function ProfileDetailsCard({ currentUser, profile }) {
           </div>
           <div>
             <div style={styles.detailLabel}>Cohort</div>
-            <div style={styles.detailValue}>{profile?.cohortId || "Not set"}</div>
+            <div style={styles.detailValue}>{profile?.cohort_id || "Not set"}</div>
           </div>
           <div>
             <div style={styles.detailLabel}>Start Date</div>
-            <div style={styles.detailValue}>{profile?.startDate || "Not set"}</div>
+            <div style={styles.detailValue}>{profile?.start_date || "Not set"}</div>
           </div>
           <div>
             <div style={styles.detailLabel}>End Date</div>
-            <div style={styles.detailValue}>{profile?.endDate || "Not set"}</div>
+            <div style={styles.detailValue}>{profile?.end_date || "Not set"}</div>
           </div>
         </div>
       )}

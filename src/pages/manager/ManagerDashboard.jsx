@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
@@ -11,7 +10,7 @@ import InternProgressCard from "./components/InternProgressCard";
 import AssignTaskModal from "./components/AssignTaskModal";
 import WeeklyDigest from "./components/WeeklyDigest";
 
-const emptyTask = { title: "", description: "", dueDate: "", priority: "medium" };
+const emptyTask = { title: "", description: "", due_date: "", priority: "medium" };
 
 export default function ManagerDashboard() {
   const { currentUser } = useAuth();
@@ -24,47 +23,25 @@ export default function ManagerDashboard() {
   const [newTask, setNewTask] = useState(emptyTask);
 
   useEffect(() => {
-    if (!currentUser) return;
-    const q = query(collection(db, "users"), where("managerId", "==", currentUser.uid));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setInterns(all.filter((u) => u.role === "intern"));
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Interns error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load your interns."));
-        setLoading(false);
-      }
-    );
-    return unsub;
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    const q = query(collection(db, "tasks"), where("managerId", "==", currentUser.uid));
-    const unsub = onSnapshot(
-      q,
-      (snap) => setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      (error) => {
-        console.error("Tasks error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
-      }
-    );
-    return unsub;
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-    const unsub = onSnapshot(
-      collection(db, "attendance"),
-      (snap) => setAttendance(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      (error) => console.error("Attendance error:", error)
-    );
-    return unsub;
-  }, [currentUser]);
+    let cancelled = false;
+    Promise.all([api.get("/users"), api.get("/tasks"), api.get("/attendance")])
+      .then(([internsData, tasksData, attendanceData]) => {
+        if (cancelled) return;
+        setInterns(internsData.filter((u) => u.role === "intern"));
+        setTasks(tasksData);
+        setAttendance(attendanceData);
+      })
+      .catch((error) => {
+        console.error("Dashboard load error:", error);
+        notifyError(friendlyApiError(error, "Couldn't load dashboard data."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function openAssignTask(intern) {
     setSelectedIntern(intern);
@@ -86,31 +63,31 @@ export default function ManagerDashboard() {
       notifyError("Task title is required.");
       return;
     }
-    if (newTask.dueDate && newTask.dueDate < new Date().toISOString().slice(0, 10)) {
+    if (newTask.due_date && newTask.due_date < new Date().toISOString().slice(0, 10)) {
       notifyError("Due date can't be in the past.");
       return;
     }
     try {
-      await addDoc(collection(db, "tasks"), {
+      const task = await api.post("/tasks", {
         ...newTask,
-        internId: selectedIntern.id,
-        managerId: currentUser.uid,
-        status: "pending",
-        createdAt: new Date().toISOString(),
+        intern_id: selectedIntern.uid,
+        manager_id: currentUser.uid,
       });
+      setTasks((current) => [task, ...current]);
       closeTaskForm();
     } catch (error) {
       console.error("Assign task error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't assign the task. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't assign the task. Please try again."));
     }
   }
 
   async function handleStatusChange(taskId, newStatus) {
     try {
-      await updateDoc(doc(db, "tasks", taskId), { status: newStatus });
+      const updated = await api.patch(`/tasks/${taskId}`, { status: newStatus });
+      setTasks((current) => current.map((task) => (task.task_id === taskId ? updated : task)));
     } catch (error) {
       console.error("Update task status error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't update the task. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't update the task. Please try again."));
     }
   }
 
@@ -152,9 +129,9 @@ export default function ManagerDashboard() {
           {interns.length === 0 && <p style={styles.empty}>No interns assigned yet.</p>}
           {interns.map((intern) => (
             <InternProgressCard
-              key={intern.id}
+              key={intern.uid}
               intern={intern}
-              tasks={tasks.filter((t) => t.internId === intern.id)}
+              tasks={tasks.filter((t) => t.intern_id === intern.uid)}
               onAssignTask={openAssignTask}
             />
           ))}
@@ -165,14 +142,14 @@ export default function ManagerDashboard() {
           <div style={styles.taskList}>
             {tasks.length === 0 && <p style={styles.empty}>No tasks assigned yet.</p>}
             {tasks.map((task) => {
-              const intern = interns.find((i) => i.id === task.internId);
+              const intern = interns.find((i) => i.uid === task.intern_id);
               return (
-                <div key={task.id} style={styles.taskItem}>
+                <div key={task.task_id} style={styles.taskItem}>
                   <div style={styles.taskTop}>
                     <span style={styles.taskTitle}>{task.title}</span>
                     <select
                       value={task.status}
-                      onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                      onChange={(e) => handleStatusChange(task.task_id, e.target.value)}
                       style={{
                         ...styles.statusSelect,
                         background: task.status === "completed" ? theme.successStrong
@@ -185,7 +162,7 @@ export default function ManagerDashboard() {
                     </select>
                   </div>
                   <div style={styles.taskMeta}>
-                    👤 {intern?.name || "Unknown"} · Due: {task.dueDate} · {task.priority} priority
+                    👤 {intern?.name || "Unknown"} · Due: {task.due_date} · {task.priority} priority
                   </div>
                 </div>
               );

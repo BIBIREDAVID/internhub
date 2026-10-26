@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, addDoc, updateDoc, deleteDoc, where } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
@@ -13,7 +12,7 @@ import TaskFormModal from "./components/TaskFormModal";
 const emptyTask = {
   title: "",
   description: "",
-  dueDate: "",
+  due_date: "",
   priority: "medium",
   status: "pending",
 };
@@ -30,40 +29,24 @@ export default function ManagerTasks() {
   const [form, setForm] = useState(emptyTask);
 
   useEffect(() => {
-    if (!currentUser) return;
-
-    const internsQuery = query(collection(db, "users"), where("managerId", "==", currentUser.uid));
-    const tasksQuery = query(collection(db, "tasks"), where("managerId", "==", currentUser.uid));
-
-    const unsubInterns = onSnapshot(
-      internsQuery,
-      (snapshot) => {
-        setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Interns load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load your interns."));
-        setLoading(false);
-      }
-    );
-
-    const unsubTasks = onSnapshot(
-      tasksQuery,
-      (snapshot) => {
-        setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
+    let cancelled = false;
+    Promise.all([api.get("/users"), api.get("/tasks")])
+      .then(([internsData, tasksData]) => {
+        if (cancelled) return;
+        setInterns(internsData);
+        setTasks(tasksData);
+      })
+      .catch((error) => {
         console.error("Tasks load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
-      }
-    );
-
+        notifyError(friendlyApiError(error, "Couldn't load tasks."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      unsubInterns();
-      unsubTasks();
+      cancelled = true;
     };
-  }, [currentUser]);
+  }, []);
 
   const visibleTasks = useMemo(() => {
     return tasks.filter((task) => filter === "all" || task.status === filter);
@@ -78,11 +61,11 @@ export default function ManagerTasks() {
 
   function openEdit(task) {
     setEditingTask(task);
-    setSelectedInternId(task.internId || "");
+    setSelectedInternId(task.intern_id || "");
     setForm({
       title: task.title || "",
       description: task.description || "",
-      dueDate: task.dueDate || "",
+      due_date: task.due_date || "",
       priority: task.priority || "medium",
       status: task.status || "pending",
     });
@@ -105,53 +88,56 @@ export default function ManagerTasks() {
       notifyError("Select an intern to assign this task to.");
       return;
     }
-    if (!editingTask && form.dueDate && form.dueDate < new Date().toISOString().slice(0, 10)) {
+    if (!editingTask && form.due_date && form.due_date < new Date().toISOString().slice(0, 10)) {
       notifyError("Due date can't be in the past.");
       return;
     }
 
-    const payload = {
-      title: form.title,
-      description: form.description,
-      dueDate: form.dueDate,
-      priority: form.priority,
-      status: form.status,
-      internId: selectedInternId,
-      managerId: currentUser.uid,
-      updatedAt: new Date().toISOString(),
-    };
-
     try {
       if (editingTask) {
-        await updateDoc(doc(db, "tasks", editingTask.id), payload);
-      } else {
-        await addDoc(collection(db, "tasks"), {
-          ...payload,
-          createdAt: new Date().toISOString(),
+        const updated = await api.patch(`/tasks/${editingTask.task_id}`, {
+          title: form.title,
+          description: form.description,
+          due_date: form.due_date,
+          priority: form.priority,
+          status: form.status,
         });
+        setTasks((current) => current.map((task) => (task.task_id === updated.task_id ? updated : task)));
+      } else {
+        const created = await api.post("/tasks", {
+          title: form.title,
+          description: form.description,
+          due_date: form.due_date,
+          priority: form.priority,
+          intern_id: selectedInternId,
+          manager_id: currentUser.uid,
+        });
+        setTasks((current) => [created, ...current]);
       }
       closeModal();
     } catch (error) {
       console.error("Save task error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't save the task. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't save the task. Please try again."));
     }
   }
 
   async function changeStatus(taskId, status) {
     try {
-      await updateDoc(doc(db, "tasks", taskId), { status, updatedAt: new Date().toISOString() });
+      const updated = await api.patch(`/tasks/${taskId}`, { status });
+      setTasks((current) => current.map((task) => (task.task_id === taskId ? updated : task)));
     } catch (error) {
       console.error("Update task status error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't update the task. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't update the task. Please try again."));
     }
   }
 
   async function removeTask(taskId) {
     try {
-      await deleteDoc(doc(db, "tasks", taskId));
+      await api.delete(`/tasks/${taskId}`);
+      setTasks((current) => current.filter((task) => task.task_id !== taskId));
     } catch (error) {
       console.error("Delete task error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't delete the task. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't delete the task. Please try again."));
     }
   }
 
@@ -210,9 +196,9 @@ export default function ManagerTasks() {
           ) : (
             visibleTasks.map((task) => (
               <TaskCard
-                key={task.id}
+                key={task.task_id}
                 task={task}
-                intern={interns.find((item) => item.id === task.internId)}
+                intern={interns.find((item) => item.uid === task.intern_id)}
                 onChangeStatus={changeStatus}
                 onEdit={openEdit}
                 onDelete={removeTask}

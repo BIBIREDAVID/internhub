@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
@@ -25,35 +24,22 @@ export default function InternTasks() {
 
   useEffect(() => {
     if (!currentUser) return;
-
-    const profileUnsub = onSnapshot(
-      doc(db, "users", currentUser.uid),
-      (snapshot) => {
-        setProfile(snapshot.exists() ? snapshot.data() : null);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Profile load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load your profile."));
-        setLoading(false);
-      }
-    );
-
-    const tasksQuery = query(collection(db, "tasks"), where("internId", "==", currentUser.uid));
-    const tasksUnsub = onSnapshot(
-      tasksQuery,
-      (snapshot) => {
-        setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
+    let cancelled = false;
+    Promise.all([api.get(`/users/${currentUser.uid}`), api.get("/tasks")])
+      .then(([profileData, tasksData]) => {
+        if (cancelled) return;
+        setProfile(profileData);
+        setTasks(tasksData);
+      })
+      .catch((error) => {
         console.error("Tasks load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
-      }
-    );
-
+        notifyError(friendlyApiError(error, "Couldn't load tasks."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      profileUnsub();
-      tasksUnsub();
+      cancelled = true;
     };
   }, [currentUser]);
 
@@ -65,8 +51,8 @@ export default function InternTasks() {
   const sortedTasks = useMemo(
     () =>
       [...filteredTasks].sort((left, right) => {
-        const leftDate = new Date(left.dueDate || "9999-12-31");
-        const rightDate = new Date(right.dueDate || "9999-12-31");
+        const leftDate = new Date(left.due_date || "9999-12-31");
+        const rightDate = new Date(right.due_date || "9999-12-31");
         return leftDate - rightDate;
       }),
     [filteredTasks]
@@ -79,10 +65,11 @@ export default function InternTasks() {
 
   async function updateStatus(taskId, status) {
     try {
-      await updateDoc(doc(db, "tasks", taskId), { status });
+      const updated = await api.patch(`/tasks/${taskId}`, { status });
+      setTasks((current) => current.map((task) => (task.task_id === taskId ? updated : task)));
     } catch (error) {
       console.error("Update task status error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't update the task. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't update the task. Please try again."));
     }
   }
 
@@ -141,7 +128,7 @@ export default function InternTasks() {
         ) : (
           <div style={styles.list}>
             {sortedTasks.map((task) => (
-              <InternTaskItem key={task.id} task={task} onChangeStatus={updateStatus} />
+              <InternTaskItem key={task.task_id} task={task} onChangeStatus={updateStatus} />
             ))}
           </div>
         )}

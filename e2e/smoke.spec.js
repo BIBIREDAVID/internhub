@@ -1,13 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-// These smoke tests only cover pages/flows that work without a real signed-in
-// Firebase user (there's no emulator or seeded test account wired into CI).
-// They catch the class of bug that would white-screen every visitor: a
-// build/route/render regression on the public pages, and the auth gate
-// actually gating. Full login -> dashboard coverage per role would need
-// seeded Firebase Auth test accounts (see scripts/seed.js) and either the
-// Firebase emulator or credentials injected into CI — deliberately out of
-// scope here.
+// These smoke tests cover pages/flows that work without a real signed-in
+// user — they catch the class of bug that would white-screen every visitor:
+// a build/route/render regression on the public pages, and the auth gate
+// actually gating. See auth-flows.spec.js for real login -> dashboard
+// coverage per role against a live API and seeded database.
 
 test("root redirects to /login", async ({ page }) => {
   await page.goto("/");

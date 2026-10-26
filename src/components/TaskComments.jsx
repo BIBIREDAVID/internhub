@@ -1,32 +1,33 @@
 import { useEffect, useState } from "react";
-import { addDoc, collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { db } from "../firebase";
-import { useAuth } from "../contexts/useAuth";
-import { notifyError, friendlyFirestoreError } from "../utils/toast";
+import { api } from "../api";
+import { notifyError } from "../utils/toast";
 import { theme } from "../theme";
 
 export default function TaskComments({ taskId }) {
-  const { currentUser, userRole } = useAuth();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      query(collection(db, "tasks", taskId, "comments"), orderBy("createdAt", "asc")),
-      (snapshot) => {
-        setComments(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
-      },
-      (error) => {
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading state for the new taskId
+    setLoading(true);
+    api
+      .get(`/tasks/${taskId}/comments`)
+      .then((data) => {
+        if (!cancelled) setComments(data);
+      })
+      .catch((error) => {
         console.error("Comments load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load comments."));
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
+        notifyError(error.message || "Couldn't load comments.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [taskId]);
 
   async function postComment(e) {
@@ -35,17 +36,12 @@ export default function TaskComments({ taskId }) {
 
     setSending(true);
     try {
-      await addDoc(collection(db, "tasks", taskId, "comments"), {
-        authorId: currentUser.uid,
-        authorName: currentUser.email,
-        authorRole: userRole,
-        text: text.trim(),
-        createdAt: new Date().toISOString(),
-      });
+      const comment = await api.post(`/tasks/${taskId}/comments`, { text: text.trim() });
+      setComments((current) => [...current, comment]);
       setText("");
     } catch (error) {
       console.error("Post comment error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't post your comment. Please try again."));
+      notifyError(error.message || "Couldn't post your comment. Please try again.");
     } finally {
       setSending(false);
     }
@@ -60,10 +56,10 @@ export default function TaskComments({ taskId }) {
       ) : (
         <div style={styles.list}>
           {comments.map((comment) => (
-            <div key={comment.id} style={styles.comment}>
+            <div key={comment.comment_id} style={styles.comment}>
               <div style={styles.commentMeta}>
-                <span style={styles.commentAuthor}>{comment.authorName || "Someone"}</span>
-                <span style={styles.commentTime}>{new Date(comment.createdAt).toLocaleString()}</span>
+                <span style={styles.commentAuthor}>{comment.author_name || "Someone"}</span>
+                <span style={styles.commentTime}>{new Date(comment.created_at).toLocaleString()}</span>
               </div>
               <div style={styles.commentText}>{comment.text}</div>
             </div>

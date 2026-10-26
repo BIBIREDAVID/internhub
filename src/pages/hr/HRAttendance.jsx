@@ -1,15 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
 import { downloadCsv } from "../../utils/csv";
-
-const attendanceConstraints = [orderBy("date", "desc")];
 
 function displayTime(isoString) {
   if (!isoString) return "—";
@@ -24,31 +21,32 @@ export default function HRAttendance() {
 
   const { docs: attendance, loading, hasMore, loadMore } = usePaginatedCollection(
     "attendance",
-    attendanceConstraints,
+    {},
     30,
-    (error) => notifyError(friendlyFirestoreError(error, "Couldn't load attendance."))
+    (error) => notifyError(friendlyApiError(error, "Couldn't load attendance."))
   );
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(
-      query(collection(db, "users")),
-      (snapshot) => {
-        setUsers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
+    let cancelled = false;
+    api
+      .get("/users")
+      .then((data) => {
+        if (!cancelled) setUsers(data);
+      })
+      .catch((error) => {
         console.error("Users load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load user data."));
-      }
-    );
-
-    return unsubUsers;
+        notifyError(friendlyApiError(error, "Couldn't load user data."));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const visibleRecords = useMemo(() => {
     return attendance
       .filter((record) => filter === "all" || record.status === filter)
       .filter((record) => {
-        const intern = users.find((user) => user.id === record.internId);
+        const intern = users.find((user) => user.uid === record.intern_id);
         const searchText = `${intern?.name || ""} ${intern?.email || ""} ${record.date || ""}`.toLowerCase();
         return searchText.includes(search.toLowerCase());
       })
@@ -62,13 +60,13 @@ export default function HRAttendance() {
         { key: "internName", label: "Intern" },
         { key: "date", label: "Date" },
         { key: "status", label: "Status" },
-        { key: "checkIn", label: "Check In" },
-        { key: "checkOut", label: "Check Out" },
-        { key: "managerComment", label: "Manager Comment" },
+        { key: "check_in", label: "Check In" },
+        { key: "check_out", label: "Check Out" },
+        { key: "manager_comment", label: "Manager Comment" },
       ],
       visibleRecords.map((record) => ({
         ...record,
-        internName: users.find((user) => user.id === record.internId)?.name || "Unknown",
+        internName: users.find((user) => user.uid === record.intern_id)?.name || "Unknown",
       }))
     );
   }
@@ -78,7 +76,7 @@ export default function HRAttendance() {
       present: attendance.filter((record) => record.status === "present").length,
       late: attendance.filter((record) => record.status === "late").length,
       absent: attendance.filter((record) => record.status === "absent").length,
-      comments: attendance.filter((record) => record.managerComment).length,
+      comments: attendance.filter((record) => record.manager_comment).length,
     };
   }, [attendance]);
 
@@ -139,15 +137,15 @@ export default function HRAttendance() {
             <p style={styles.empty}>No attendance records match this filter.</p>
           ) : (
             visibleRecords.map((record) => {
-              const intern = users.find((user) => user.id === record.internId);
+              const intern = users.find((user) => user.uid === record.intern_id);
               return (
-                <div key={record.id} style={styles.row}>
+                <div key={record.attendance_id} style={styles.row}>
                   <div style={styles.rowMain}>
                     <div style={styles.rowHeader}>
                       <div>
                         <div style={styles.rowTitle}>{intern?.name || "Unknown intern"}</div>
                         <div style={styles.rowMeta}>
-                          {record.date} · In {displayTime(record.checkIn)} · Out {displayTime(record.checkOut)}
+                          {record.date} · In {displayTime(record.check_in)} · Out {displayTime(record.check_out)}
                         </div>
                       </div>
                       <div style={styles.rowRight}>
@@ -169,7 +167,7 @@ export default function HRAttendance() {
 
                     <div style={styles.commentBox}>
                       <div style={styles.commentLabel}>Exception / comment</div>
-                      <div style={styles.commentText}>{record.managerComment || "None"}</div>
+                      <div style={styles.commentText}>{record.manager_comment || "None"}</div>
                     </div>
                   </div>
                 </div>

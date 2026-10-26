@@ -1,30 +1,26 @@
 import { useMemo, useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../firebase";
-import { useAuth } from "../../contexts/useAuth";
+import { api } from "../../api";
 import Layout from "../../components/Layout";
-import { notifyError, notifySuccess, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, notifySuccess, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
 import ApplicationDetailModal from "./components/ApplicationDetailModal";
-import { logActivity } from "../../utils/activityLog";
 import { downloadCsv } from "../../utils/csv";
 
 const statuses = ["all", "new", "shortlisted", "rejected", "hired"];
 
 export default function HRApplications() {
-  const { currentUser } = useAuth();
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [checked, setChecked] = useState(new Set());
 
   const { docs: applications, loading, hasMore, loadMore } = usePaginatedCollection(
     "applications",
-    [],
+    {},
     25,
-    (error) => notifyError(friendlyFirestoreError(error, "Couldn't load applications."))
+    (error) => notifyError(friendlyApiError(error, "Couldn't load applications."))
   );
 
   const visibleApplications = useMemo(
@@ -32,29 +28,17 @@ export default function HRApplications() {
     [applications, filter]
   );
 
-  async function updateApplicationStatus(applicationId, nextStatus, applicantName) {
-    await updateDoc(doc(db, "applications", applicationId), {
-      status: nextStatus,
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: currentUser.uid,
-    });
-    logActivity({
-      actor: currentUser,
-      action: "application_status_change",
-      targetType: "application",
-      targetId: applicationId,
-      details: { applicantName, status: nextStatus },
-    });
+  async function updateApplicationStatus(applicationId, nextStatus) {
+    await api.patch(`/applications/${applicationId}`, { status: nextStatus });
   }
 
   async function updateApplication(applicationId, nextStatus) {
     try {
-      const applicant = applications.find((application) => application.id === applicationId);
-      await updateApplicationStatus(applicationId, nextStatus, applicant?.name);
-      setSelected((current) => (current?.id === applicationId ? null : current));
+      await updateApplicationStatus(applicationId, nextStatus);
+      setSelected((current) => (current?.application_id === applicationId ? null : current));
     } catch (error) {
       console.error("Update application error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't update the application. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't update the application. Please try again."));
     }
   }
 
@@ -73,12 +57,7 @@ export default function HRApplications() {
       return;
     }
     const ids = [...checked];
-    const results = await Promise.allSettled(
-      ids.map((id) => {
-        const applicant = applications.find((application) => application.id === id);
-        return updateApplicationStatus(id, nextStatus, applicant?.name);
-      })
-    );
+    const results = await Promise.allSettled(ids.map((id) => updateApplicationStatus(id, nextStatus)));
     const failed = results.filter((result) => result.status === "rejected").length;
     if (failed === 0) {
       notifySuccess(`Marked ${ids.length} application${ids.length === 1 ? "" : "s"} as ${nextStatus}.`);
@@ -92,12 +71,12 @@ export default function HRApplications() {
     downloadCsv(
       `applications-${new Date().toISOString().slice(0, 10)}.csv`,
       [
-        { key: "name", label: "Name" },
-        { key: "email", label: "Email" },
+        { key: "candidate_name", label: "Name" },
+        { key: "candidate_email", label: "Email" },
         { key: "department", label: "Department" },
-        { key: "cohortId", label: "Cohort" },
+        { key: "stage", label: "Stage" },
         { key: "status", label: "Status" },
-        { key: "reviewedAt", label: "Reviewed At" },
+        { key: "reviewed_at", label: "Reviewed At" },
       ],
       visibleApplications
     );
@@ -171,36 +150,35 @@ export default function HRApplications() {
             <p style={styles.empty}>No applications match this filter.</p>
           ) : (
             visibleApplications.map((application) => (
-              <div key={application.id} style={styles.row}>
+              <div key={application.application_id} style={styles.row}>
                 <input
                   type="checkbox"
-                  checked={checked.has(application.id)}
-                  onChange={() => toggleChecked(application.id)}
+                  checked={checked.has(application.application_id)}
+                  onChange={() => toggleChecked(application.application_id)}
                   style={styles.checkbox}
                 />
-                <div style={styles.avatar}>{application.name?.[0]?.toUpperCase() || "A"}</div>
+                <div style={styles.avatar}>{application.candidate_name?.[0]?.toUpperCase() || "A"}</div>
                 <div style={styles.rowMain}>
                   <div style={styles.rowHeader}>
                     <div>
-                      <div style={styles.rowTitle}>{application.name || "Unnamed applicant"}</div>
+                      <div style={styles.rowTitle}>{application.candidate_name || "Unnamed applicant"}</div>
                       <div style={styles.rowMeta}>
-                        {application.email || "No email"} · {application.department || "General"}
+                        {application.candidate_email || "No email"} · {application.department || "General"}
                       </div>
                     </div>
                     <div style={styles.actions}>
                       <button onClick={() => setSelected(application)} style={styles.openBtn}>Open</button>
-                      <button onClick={() => updateApplication(application.id, "shortlisted")} style={styles.shortlistBtn}>
+                      <button onClick={() => updateApplication(application.application_id, "shortlisted")} style={styles.shortlistBtn}>
                         Shortlist
                       </button>
-                      <button onClick={() => updateApplication(application.id, "rejected")} style={styles.rejectBtn}>
+                      <button onClick={() => updateApplication(application.application_id, "rejected")} style={styles.rejectBtn}>
                         Reject
                       </button>
                     </div>
                   </div>
                   <div style={styles.metaRow}>
                     <span style={styles.pill}>{application.status || "new"}</span>
-                    <span style={styles.pill}>{application.cohortId || "No cohort"}</span>
-                    <span style={styles.pill}>{application.educationLevel || "Applicant"}</span>
+                    <span style={styles.pill}>{application.stage || "No stage"}</span>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
 import { theme } from "../../theme";
@@ -13,30 +12,22 @@ export default function InternDashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile
   useEffect(() => {
     if (!currentUser) return;
-    getDoc(doc(db, "users", currentUser.uid))
-      .then((snap) => {
-        if (snap.exists()) setProfile(snap.data());
-        else console.log("No user document found!");
+    let cancelled = false;
+    Promise.all([api.get(`/users/${currentUser.uid}`), api.get("/tasks")])
+      .then(([profileData, tasksData]) => {
+        if (cancelled) return;
+        setProfile(profileData);
+        setTasks(tasksData);
       })
-      .catch((err) => console.error("Profile fetch error:", err))
-      .finally(() => setLoading(false));
-  }, [currentUser]);
-
-  // Live tasks listener
-  useEffect(() => {
-    if (!currentUser) return;
-    const q = query(
-      collection(db, "tasks"),
-      where("internId", "==", currentUser.uid)
-    );
-    const unsub = onSnapshot(q,
-      (snap) => setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      (err) => console.error("Tasks error:", err)
-    );
-    return unsub;
+      .catch((err) => console.error("Dashboard load error:", err))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [currentUser]);
 
   if (loading) return (
@@ -63,7 +54,7 @@ export default function InternDashboard() {
       <div style={styles.welcome}>
         <h2 style={styles.welcomeTitle}>Welcome back, {profile?.name?.split(" ")[0]} 👋</h2>
         <p style={styles.welcomeSub}>
-          {profile?.department} · Cohort {profile?.cohortId} · {profile?.startDate} → {profile?.endDate}
+          {profile?.department} · Cohort {profile?.cohort_id} · {profile?.start_date} → {profile?.end_date}
         </p>
       </div>
 
@@ -82,7 +73,7 @@ export default function InternDashboard() {
           <div style={styles.taskList}>
             {tasks.length === 0 && <p style={styles.empty}>No tasks assigned yet.</p>}
             {tasks.map((task) => (
-              <div key={task.id} style={styles.taskItem}>
+              <div key={task.task_id} style={styles.taskItem}>
                 <div style={styles.taskTop}>
                   <span style={styles.taskTitle}>{task.title}</span>
                   <span style={{
@@ -95,7 +86,7 @@ export default function InternDashboard() {
                 </div>
                 <p style={styles.taskDesc}>{task.description}</p>
                 <div style={styles.taskBottom}>
-                  <span style={styles.taskMeta}>Due: {task.dueDate}</span>
+                  <span style={styles.taskMeta}>Due: {task.due_date}</span>
                   <span style={{
                     ...styles.priorityDot,
                     background: task.priority === "high" ? theme.danger
@@ -124,8 +115,8 @@ export default function InternDashboard() {
             <h3 style={styles.cardTitle}>Onboarding Progress</h3>
             <div style={styles.stepList}>
               {onboardingSteps.map((step, i) => {
-                const done = i < (profile?.onboardingStep || 0);
-                const current = i === (profile?.onboardingStep || 0);
+                const done = i < (profile?.onboarding_step || 0);
+                const current = i === (profile?.onboarding_step || 0);
                 return (
                   <div key={step} style={styles.step}>
                     <div style={{

@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const Login = lazy(() => import("./pages/auth/Login"));
 const Signup = lazy(() => import("./pages/auth/Signup"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 const HRDashboard = lazy(() => import("./pages/hr/HRDashboard"));
 const HRApplications = lazy(() => import("./pages/hr/HRApplications"));
 const HRPipeline = lazy(() => import("./pages/hr/HRPipeline"));
@@ -24,7 +25,7 @@ const InternAttendance = lazy(() => import("./pages/intern/InternAttendance"));
 const InternOnboarding = lazy(() => import("./pages/intern/InternOnboarding"));
 
 function RouteFallback() {
-  return <div style={{ minHeight: "100vh", background: "#0f172a" }} />;
+  return <div style={{ minHeight: "100vh", background: "#f8fafc" }} />;
 }
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route path="/hr/dashboard" element={
             <ProtectedRoute allowedRoles={["hr"]}>

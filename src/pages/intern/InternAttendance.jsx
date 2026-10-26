@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { collection, doc, onSnapshot, query, setDoc, where } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import { useAuth } from "../../contexts/useAuth";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
@@ -31,35 +30,22 @@ export default function InternAttendance() {
 
   useEffect(() => {
     if (!currentUser) return;
-
-    const profileUnsub = onSnapshot(
-      doc(db, "users", currentUser.uid),
-      (snapshot) => {
-        setProfile(snapshot.exists() ? snapshot.data() : null);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Profile load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load your profile."));
-        setLoading(false);
-      }
-    );
-
-    const attendanceQuery = query(collection(db, "attendance"), where("internId", "==", currentUser.uid));
-    const recordsUnsub = onSnapshot(
-      attendanceQuery,
-      (snapshot) => {
-        setRecords(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
+    let cancelled = false;
+    Promise.all([api.get(`/users/${currentUser.uid}`), api.get("/attendance")])
+      .then(([profileData, recordsData]) => {
+        if (cancelled) return;
+        setProfile(profileData);
+        setRecords(recordsData);
+      })
+      .catch((error) => {
         console.error("Attendance load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load attendance records."));
-      }
-    );
-
+        notifyError(friendlyApiError(error, "Couldn't load attendance records."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      profileUnsub();
-      recordsUnsub();
+      cancelled = true;
     };
   }, [currentUser]);
 
@@ -77,20 +63,35 @@ export default function InternAttendance() {
     attendedStreak,
   } = useAttendanceStats(records, today);
 
+  function upsertRecord(record) {
+    setRecords((current) => {
+      const exists = current.some((item) => item.attendance_id === record.attendance_id);
+      return exists
+        ? current.map((item) => (item.attendance_id === record.attendance_id ? record : item))
+        : [...current, record];
+    });
+  }
+
   async function checkIn() {
     setSaving(true);
     try {
-      await setDoc(doc(db, "attendance", `${currentUser.uid}_${today}`), {
-        internId: currentUser.uid,
-        date: today,
-        status: "present",
-        checkIn: new Date().toISOString(),
-        checkOut: todaysRecord?.checkOut || null,
-        note: todaysRecord?.note || "",
-      }, { merge: true });
+      let record;
+      if (todaysRecord) {
+        record = await api.patch(`/attendance/${todaysRecord.attendance_id}`, {
+          check_in: new Date().toISOString(),
+        });
+      } else {
+        record = await api.post("/attendance", {
+          intern_id: currentUser.uid,
+          date: today,
+          status: "present",
+          check_in: new Date().toISOString(),
+        });
+      }
+      upsertRecord(record);
     } catch (error) {
       console.error("Check-in error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't check in. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't check in. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -99,17 +100,23 @@ export default function InternAttendance() {
   async function checkOut() {
     setSaving(true);
     try {
-      await setDoc(doc(db, "attendance", `${currentUser.uid}_${today}`), {
-        internId: currentUser.uid,
-        date: today,
-        status: todaysRecord?.status === "late" ? "late" : "present",
-        checkIn: todaysRecord?.checkIn || new Date().toISOString(),
-        checkOut: new Date().toISOString(),
-        note: todaysRecord?.note || "",
-      }, { merge: true });
+      let record;
+      if (todaysRecord) {
+        record = await api.patch(`/attendance/${todaysRecord.attendance_id}`, {
+          check_out: new Date().toISOString(),
+        });
+      } else {
+        record = await api.post("/attendance", {
+          intern_id: currentUser.uid,
+          date: today,
+          status: "present",
+          check_out: new Date().toISOString(),
+        });
+      }
+      upsertRecord(record);
     } catch (error) {
       console.error("Check-out error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't check out. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't check out. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -134,11 +141,11 @@ export default function InternAttendance() {
           </p>
         </div>
         <div style={styles.actions}>
-          <button disabled={saving || todaysRecord?.checkIn} onClick={checkIn} style={styles.primaryBtn}>
-            {todaysRecord?.checkIn ? "Checked In" : saving ? "Saving..." : "Check In"}
+          <button disabled={saving || todaysRecord?.check_in} onClick={checkIn} style={styles.primaryBtn}>
+            {todaysRecord?.check_in ? "Checked In" : saving ? "Saving..." : "Check In"}
           </button>
-          <button disabled={saving || !todaysRecord?.checkIn || todaysRecord?.checkOut} onClick={checkOut} style={styles.secondaryBtn}>
-            {todaysRecord?.checkOut ? "Checked Out" : saving ? "Saving..." : "Check Out"}
+          <button disabled={saving || !todaysRecord?.check_in || todaysRecord?.check_out} onClick={checkOut} style={styles.secondaryBtn}>
+            {todaysRecord?.check_out ? "Checked Out" : saving ? "Saving..." : "Check Out"}
           </button>
         </div>
       </div>
@@ -171,7 +178,7 @@ export default function InternAttendance() {
             <div style={styles.summaryLabel}>Today</div>
             <div style={styles.summaryValue}>{todaysRecord?.status ? todaysRecord.status : "Not checked in yet"}</div>
             <div style={styles.summaryMeta}>
-              Check in {displayTime(todaysRecord?.checkIn)} · Check out {displayTime(todaysRecord?.checkOut)}
+              Check in {displayTime(todaysRecord?.check_in)} · Check out {displayTime(todaysRecord?.check_out)}
             </div>
           </div>
         </div>
@@ -191,11 +198,11 @@ export default function InternAttendance() {
             </div>
             <div>
               <div style={styles.todayLabel}>Check in</div>
-              <div style={styles.todayValue}>{displayTime(todaysRecord.checkIn)}</div>
+              <div style={styles.todayValue}>{displayTime(todaysRecord.check_in)}</div>
             </div>
             <div>
               <div style={styles.todayLabel}>Check out</div>
-              <div style={styles.todayValue}>{displayTime(todaysRecord.checkOut)}</div>
+              <div style={styles.todayValue}>{displayTime(todaysRecord.check_out)}</div>
             </div>
             <div>
               <div style={styles.todayLabel}>Note</div>

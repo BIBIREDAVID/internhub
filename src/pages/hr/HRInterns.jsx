@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
-import { db } from "../../firebase";
-import { useAuth } from "../../contexts/useAuth";
+import { api } from "../../api";
 import Layout from "../../components/Layout";
-import { notifyError, notifySuccess, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, notifySuccess, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
-import { logActivity } from "../../utils/activityLog";
 
-const internConstraints = [where("role", "==", "intern")];
+const internParams = { role: "intern" };
 const ALL = "all";
 
 export default function HRInterns() {
-  const { currentUser } = useAuth();
   const [managers, setManagers] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [bulkManagerId, setBulkManagerId] = useState("");
@@ -22,81 +18,67 @@ export default function HRInterns() {
   const [cohortFilter, setCohortFilter] = useState(ALL);
   const { docs: interns, loading, hasMore, loadMore } = usePaginatedCollection(
     "users",
-    internConstraints,
+    internParams,
     25,
-    (error) => notifyError(friendlyFirestoreError(error, "Couldn't load interns."))
+    (error) => notifyError(friendlyApiError(error, "Couldn't load interns."))
   );
 
   useEffect(() => {
-    const unsubManagers = onSnapshot(
-      query(collection(db, "users"), where("role", "==", "manager")),
-      (snapshot) => {
-        setManagers(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
+    let cancelled = false;
+    api
+      .get("/users?role=manager")
+      .then((data) => {
+        if (!cancelled) setManagers(data);
+      })
+      .catch((error) => {
         console.error("Managers load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load managers."));
-      }
-    );
-
-    return unsubManagers;
+        notifyError(friendlyApiError(error, "Couldn't load managers."));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const activeManagers = useMemo(() => managers.filter((manager) => manager.active !== false), [managers]);
-  const managerIds = useMemo(() => new Set(activeManagers.map((manager) => manager.id)), [activeManagers]);
-  const managerName = (managerId) => managers.find((manager) => manager.id === managerId)?.name;
+  const managerIds = useMemo(() => new Set(activeManagers.map((manager) => manager.uid)), [activeManagers]);
 
   const departments = useMemo(
     () => [...new Set(interns.map((intern) => intern.department).filter(Boolean))].sort(),
     [interns]
   );
   const cohorts = useMemo(
-    () => [...new Set(interns.map((intern) => intern.cohortId).filter(Boolean))].sort(),
+    () => [...new Set(interns.map((intern) => intern.cohort_id).filter(Boolean))].sort(),
     [interns]
   );
 
   const visibleInterns = useMemo(() => {
     return interns.filter((intern) => {
       if (departmentFilter !== ALL && intern.department !== departmentFilter) return false;
-      if (cohortFilter !== ALL && intern.cohortId !== cohortFilter) return false;
+      if (cohortFilter !== ALL && intern.cohort_id !== cohortFilter) return false;
       return true;
     });
   }, [interns, departmentFilter, cohortFilter]);
 
-  async function updateManagerAssignment(internId, managerId, internName) {
-    await updateDoc(doc(db, "users", internId), { managerId: managerId || null });
-    logActivity({
-      actor: currentUser,
-      action: "reassign_manager",
-      targetType: "user",
-      targetId: internId,
-      details: { internName, managerId: managerId || null, managerName: managerName(managerId) || null },
-    });
+  async function updateManagerAssignment(internId, managerId) {
+    await api.patch(`/users/${internId}`, { manager_id: managerId || null });
   }
 
-  async function assignManager(internId, managerId, internName) {
+  async function assignManager(internId, managerId) {
     try {
-      await updateManagerAssignment(internId, managerId, internName);
+      await updateManagerAssignment(internId, managerId);
     } catch (error) {
       console.error("Assign manager error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't assign manager. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't assign manager. Please try again."));
     }
   }
 
   async function setActive(user, active) {
     try {
-      await updateDoc(doc(db, "users", user.id), { active });
-      logActivity({
-        actor: currentUser,
-        action: active ? "user_reactivated" : "user_deactivated",
-        targetType: "user",
-        targetId: user.id,
-        details: { name: user.name, role: user.role },
-      });
+      await api.patch(`/users/${user.uid}`, { active });
       notifySuccess(`${user.name || "User"} ${active ? "reactivated" : "deactivated"}.`);
     } catch (error) {
       console.error("Set active error:", error);
-      notifyError(friendlyFirestoreError(error, "Couldn't update this user. Please try again."));
+      notifyError(friendlyApiError(error, "Couldn't update this user. Please try again."));
     }
   }
 
@@ -116,10 +98,7 @@ export default function HRInterns() {
     }
     const internIds = [...selected];
     const results = await Promise.allSettled(
-      internIds.map((internId) => {
-        const intern = interns.find((item) => item.id === internId);
-        return updateManagerAssignment(internId, bulkManagerId, intern?.name);
-      })
+      internIds.map((internId) => updateManagerAssignment(internId, bulkManagerId))
     );
     const failed = results.filter((result) => result.status === "rejected").length;
     if (failed === 0) {
@@ -152,8 +131,8 @@ export default function HRInterns() {
         items={[
           { label: "Interns", value: interns.length, color: theme.primary },
           { label: "Managers", value: activeManagers.length, color: theme.info },
-          { label: "Assigned", value: interns.filter((intern) => intern.managerId).length, color: theme.success },
-          { label: "Unassigned", value: interns.filter((intern) => !intern.managerId).length, color: theme.warning },
+          { label: "Assigned", value: interns.filter((intern) => intern.manager_id).length, color: theme.success },
+          { label: "Unassigned", value: interns.filter((intern) => !intern.manager_id).length, color: theme.warning },
         ]}
       />
 
@@ -183,7 +162,7 @@ export default function HRInterns() {
           <select value={bulkManagerId} onChange={(e) => setBulkManagerId(e.target.value)} style={styles.bulkSelect}>
             <option value="">Unassign</option>
             {activeManagers.map((manager) => (
-              <option key={manager.id} value={manager.id}>{manager.name || manager.email}</option>
+              <option key={manager.uid} value={manager.uid}>{manager.name || manager.email}</option>
             ))}
           </select>
           <button onClick={applyBulkManager} style={styles.bulkApplyBtn}>Apply to selected</button>
@@ -198,14 +177,14 @@ export default function HRInterns() {
             <p style={styles.empty}>No intern records match these filters.</p>
           ) : (
             visibleInterns.map((intern) => {
-              const orphanedManager = intern.managerId && !managerIds.has(intern.managerId);
+              const orphanedManager = intern.manager_id && !managerIds.has(intern.manager_id);
               const deactivated = intern.active === false;
               return (
-                <div key={intern.id} style={{ ...styles.row, opacity: deactivated ? 0.6 : 1 }}>
+                <div key={intern.uid} style={{ ...styles.row, opacity: deactivated ? 0.6 : 1 }}>
                   <input
                     type="checkbox"
-                    checked={selected.has(intern.id)}
-                    onChange={() => toggleSelected(intern.id)}
+                    checked={selected.has(intern.uid)}
+                    onChange={() => toggleSelected(intern.uid)}
                     style={styles.checkbox}
                   />
                   <div style={styles.avatar}>{intern.name?.[0]?.toUpperCase() || "I"}</div>
@@ -219,7 +198,7 @@ export default function HRInterns() {
                         <div style={styles.rowMeta}>{intern.email || "No email"} · {intern.department || "No department"}</div>
                       </div>
                       <div style={styles.rowRight}>
-                        <span style={styles.pill}>{intern.cohortId || "No cohort"}</span>
+                        <span style={styles.pill}>{intern.cohort_id || "No cohort"}</span>
                         <button
                           onClick={() => setActive(intern, deactivated)}
                           style={deactivated ? styles.reactivateBtn : styles.deactivateBtn}
@@ -233,13 +212,13 @@ export default function HRInterns() {
                       <div>
                         <div style={styles.label}>Manager</div>
                         <select
-                          value={intern.managerId || ""}
-                          onChange={(event) => assignManager(intern.id, event.target.value, intern.name)}
+                          value={intern.manager_id || ""}
+                          onChange={(event) => assignManager(intern.uid, event.target.value)}
                           style={styles.input}
                         >
                           <option value="">Unassigned</option>
                           {activeManagers.map((manager) => (
-                            <option key={manager.id} value={manager.id}>{manager.name || manager.email}</option>
+                            <option key={manager.uid} value={manager.uid}>{manager.name || manager.email}</option>
                           ))}
                         </select>
                         {orphanedManager && (
@@ -254,14 +233,14 @@ export default function HRInterns() {
                       </div>
                       <div>
                         <div style={styles.label}>Onboarding</div>
-                        <div style={styles.value}>{intern.onboardingStep ?? 0} / 5 steps</div>
+                        <div style={styles.value}>{intern.onboarding_step ?? 0} / 5 steps</div>
                       </div>
                       <div>
                         <div style={styles.label}>Tags</div>
                         <div style={styles.tags}>
                           {intern.department && <span style={styles.tag}>{intern.department}</span>}
-                          {intern.cohortId && <span style={styles.tag}>Cohort {intern.cohortId}</span>}
-                          {intern.managerId ? <span style={styles.tag}>Assigned</span> : <span style={styles.tag}>Needs manager</span>}
+                          {intern.cohort_id && <span style={styles.tag}>Cohort {intern.cohort_id}</span>}
+                          {intern.manager_id ? <span style={styles.tag}>Assigned</span> : <span style={styles.tag}>Needs manager</span>}
                         </div>
                       </div>
                     </div>
@@ -285,7 +264,7 @@ export default function HRInterns() {
             managers.map((manager) => {
               const deactivated = manager.active === false;
               return (
-                <div key={manager.id} style={{ ...styles.managerRow, opacity: deactivated ? 0.6 : 1 }}>
+                <div key={manager.uid} style={{ ...styles.managerRow, opacity: deactivated ? 0.6 : 1 }}>
                   <div>
                     <div style={styles.rowTitle}>
                       {manager.name || manager.email}

@@ -20,11 +20,11 @@ export default function AttendanceHistoryList({ records }) {
   return (
     <div style={styles.list}>
       {records.slice(0, 10).map((record) => (
-        <div key={record.id} style={styles.row}>
+        <div key={record.attendance_id} style={styles.row}>
           <div style={styles.rowMain}>
             <div style={styles.rowTitle}>{record.date}</div>
             <div style={styles.rowMeta}>
-              In: {displayTime(record.checkIn)} · Out: {displayTime(record.checkOut)}
+              In: {displayTime(record.check_in)} · Out: {displayTime(record.check_out)}
             </div>
           </div>
           <div style={{ ...styles.statusPill, background: statusBg[record.status] || statusBg.present }}>

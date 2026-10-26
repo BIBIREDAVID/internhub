@@ -6,18 +6,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Dark is InternHub's native palette — the default. */
-  color-scheme: dark;
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-alt: #111827;
-  --color-border: #334155;
-  --color-text: #f8fafc;
-  --color-muted: #94a3b8;
-  --color-faint: #64748b;
-}
-
-:root[data-theme="light"] {
+  /* InternHub is light-mode only. */
   color-scheme: light;
   --color-bg: #f8fafc;
   --color-surface: #ffffff;

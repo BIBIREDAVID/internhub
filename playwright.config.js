@@ -7,10 +7,18 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4173",
   },
-  webServer: {
-    command: "npm run preview -- --port 4173",
-    url: "http://localhost:4173",
-    reuseExistingServer: !process.env.CI,
-    timeout: 60000,
-  },
+  webServer: [
+    {
+      command: "npm run server",
+      url: "http://localhost:4000/health",
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+    },
+    {
+      command: "npm run preview -- --port 4173",
+      url: "http://localhost:4173",
+      reuseExistingServer: !process.env.CI,
+      timeout: 60000,
+    },
+  ],
 });

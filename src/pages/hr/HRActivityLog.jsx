@@ -1,33 +1,33 @@
-import { orderBy } from "firebase/firestore";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import { usePaginatedCollection } from "../../hooks/usePaginatedCollection";
 import { PageSkeleton } from "../../components/Skeleton";
 
-const activityConstraints = [orderBy("createdAt", "desc")];
-
 const actionLabels = {
   reassign_manager: "Reassigned manager",
-  application_status_change: "Updated application status",
-  invite_sent: "Sent invite",
-  invite_resent: "Resent invite",
-  invite_cancelled: "Cancelled invite",
+  reassign_intern: "Reassigned intern's manager",
+  deactivate_intern: "Deactivated user",
+  reactivate_intern: "Reactivated user",
+  update_application_status: "Updated application status",
+  send_invite: "Sent invite",
+  resend_invite: "Resent invite",
 };
 
 function describe(entry) {
   const label = actionLabels[entry.action] || entry.action;
   const d = entry.details || {};
   switch (entry.action) {
-    case "reassign_manager":
-      return `${label}: ${d.internName || entry.targetId} → ${d.managerName || (d.managerId ? d.managerId : "Unassigned")}`;
-    case "application_status_change":
-      return `${label}: ${d.applicantName || entry.targetId} → ${d.status}`;
-    case "invite_sent":
-      return `${label}: ${entry.targetId} (${d.role})`;
-    case "invite_resent":
-    case "invite_cancelled":
-      return `${label}: ${entry.targetId}`;
+    case "reassign_intern":
+      return `${label}: ${entry.target_id} (${d.from || "unassigned"} → ${d.to || "unassigned"})`;
+    case "deactivate_intern":
+    case "reactivate_intern":
+      return `${label}: ${entry.target_id}`;
+    case "update_application_status":
+      return `${label}: ${entry.target_id} → ${d.status || d.stage}`;
+    case "send_invite":
+    case "resend_invite":
+      return `${label}: ${entry.target_id} (${d.role || d.managerId ? d.role : ""})`;
     default:
       return label;
   }
@@ -35,10 +35,10 @@ function describe(entry) {
 
 export default function HRActivityLog() {
   const { docs: entries, loading, hasMore, loadMore } = usePaginatedCollection(
-    "activityLog",
-    activityConstraints,
+    "activity-log",
+    {},
     30,
-    (error) => notifyError(friendlyFirestoreError(error, "Couldn't load the activity log."))
+    (error) => notifyError(friendlyApiError(error, "Couldn't load the activity log."))
   );
 
   if (loading) {
@@ -64,11 +64,11 @@ export default function HRActivityLog() {
             <p style={styles.empty}>No activity recorded yet.</p>
           ) : (
             entries.map((entry) => (
-              <div key={entry.id} style={styles.row}>
+              <div key={entry.entry_id} style={styles.row}>
                 <div style={styles.rowMain}>
                   <div style={styles.rowTitle}>{describe(entry)}</div>
                   <div style={styles.rowMeta}>
-                    {entry.actorEmail || "Unknown"} · {new Date(entry.createdAt).toLocaleString()}
+                    {entry.actor_email || "Unknown"} · {new Date(entry.created_at).toLocaleString()}
                   </div>
                 </div>
               </div>

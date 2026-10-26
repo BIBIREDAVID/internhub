@@ -11,12 +11,12 @@ export default function TaskCard({ task, intern, onChangeStatus, onEdit, onDelet
         <div>
           <div style={styles.taskTitle}>{task.title}</div>
           <div style={styles.taskMeta}>
-            {intern?.name || "No intern"} · Due {task.dueDate || "unscheduled"} · {task.priority || "medium"} priority
+            {intern?.name || "No intern"} · Due {task.due_date || "unscheduled"} · {task.priority || "medium"} priority
           </div>
         </div>
         <select
           value={task.status || "pending"}
-          onChange={(event) => onChangeStatus(task.id, event.target.value)}
+          onChange={(event) => onChangeStatus(task.task_id, event.target.value)}
           style={{
             ...styles.statusSelect,
             background:
@@ -31,12 +31,12 @@ export default function TaskCard({ task, intern, onChangeStatus, onEdit, onDelet
       <div style={styles.taskDesc}>{task.description || "No description provided."}</div>
       <div style={styles.taskActions}>
         <button onClick={() => onEdit(task)} style={styles.actionBtn}>Edit</button>
-        <button onClick={() => onDelete(task.id)} style={styles.dangerBtn}>Delete</button>
+        <button onClick={() => onDelete(task.task_id)} style={styles.dangerBtn}>Delete</button>
         <button onClick={() => setShowComments((current) => !current)} style={styles.actionBtn}>
           {showComments ? "Hide comments" : "Comments"}
         </button>
       </div>
-      {showComments && <TaskComments taskId={task.id} />}
+      {showComments && <TaskComments taskId={task.task_id} />}
     </div>
   );
 }

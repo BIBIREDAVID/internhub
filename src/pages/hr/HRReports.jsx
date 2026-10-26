@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase";
+import { api } from "../../api";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
@@ -24,32 +23,30 @@ export default function HRReports() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const collections = [
-      { name: "users", setter: setUsers },
-      { name: "tasks", setter: setTasks },
-      { name: "attendance", setter: setAttendance },
-      { name: "applications", setter: setApplications },
-    ];
-
-    let pending = collections.length;
-    const unsubs = collections.map(({ name, setter }) =>
-      onSnapshot(
-        collection(db, name),
-        (snapshot) => {
-          setter(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-          pending = Math.max(0, pending - 1);
-          if (pending === 0) setLoading(false);
-        },
-        (error) => {
-          console.error(`Reports ${name} load error:`, error);
-          notifyError(friendlyFirestoreError(error, `Couldn't load ${name} for reports.`));
-          pending = Math.max(0, pending - 1);
-          if (pending === 0) setLoading(false);
-        }
-      )
-    );
-
-    return () => unsubs.forEach((unsub) => unsub());
+    let cancelled = false;
+    Promise.all([
+      api.get("/users"),
+      api.get("/tasks"),
+      api.get("/attendance"),
+      api.get("/applications"),
+    ])
+      .then(([usersData, tasksData, attendanceData, applicationsData]) => {
+        if (cancelled) return;
+        setUsers(usersData);
+        setTasks(tasksData);
+        setAttendance(attendanceData);
+        setApplications(applicationsData);
+      })
+      .catch((error) => {
+        console.error("Reports load error:", error);
+        notifyError(friendlyApiError(error, "Couldn't load reports data."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const interns = useMemo(() => users.filter((user) => user.role === "intern"), [users]);
@@ -66,8 +63,8 @@ export default function HRReports() {
   const onboardingStats = useMemo(() => {
     if (interns.length === 0) return { avgStep: 0, totalSteps: 5, complete: 0 };
     const totalSteps = 5;
-    const sumSteps = interns.reduce((sum, intern) => sum + (intern.onboardingStep || 0), 0);
-    const complete = interns.filter((intern) => (intern.onboardingStep || 0) >= totalSteps).length;
+    const sumSteps = interns.reduce((sum, intern) => sum + (intern.onboarding_step || 0), 0);
+    const complete = interns.filter((intern) => (intern.onboarding_step || 0) >= totalSteps).length;
     return { avgStep: sumSteps / interns.length, totalSteps, complete };
   }, [interns]);
 

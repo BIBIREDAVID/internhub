@@ -1,50 +1,51 @@
-import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { useEffect, useState, useCallback } from "react";
+import { api } from "../api";
 import { AuthContext } from "./auth-context-instance";
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadRole(user) {
+  const refreshUserRole = useCallback(async () => {
     try {
-      const docSnap = await getDoc(doc(db, "users", user.uid));
-      setUserRole(docSnap.exists() ? docSnap.data().role ?? null : null);
-    } catch (error) {
-      console.error("Auth profile load error:", error);
-      setUserRole(null);
+      const user = await api.get("/auth/me");
+      setCurrentUser(user);
+    } catch {
+      setCurrentUser(null);
     }
-  }
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await loadRole(user);
-        setCurrentUser(user);
-      } else {
-        setCurrentUser(null);
-        setUserRole(null);
-      }
-      setLoading(false);
-    });
-
-    return unsubscribe;
   }, []);
 
-  // Call after writing a users/{uid} doc for the current session (e.g. right
-  // after self-provisioning during signup) so the role in context catches up
-  // without waiting for another auth state change.
-  async function refreshUserRole() {
-    if (auth.currentUser) await loadRole(auth.currentUser);
+  useEffect(() => {
+    (async () => {
+      await refreshUserRole();
+      setLoading(false);
+    })();
+  }, [refreshUserRole]);
+
+  async function login(email, password) {
+    const user = await api.post("/auth/login", { email, password });
+    setCurrentUser(user);
+    return user;
+  }
+
+  async function signup(email, password, name) {
+    const user = await api.post("/auth/signup", { email, password, name });
+    setCurrentUser(user);
+    return user;
+  }
+
+  async function logout() {
+    await api.post("/auth/logout");
+    setCurrentUser(null);
   }
 
   const value = {
     currentUser,
-    userRole,
+    userRole: currentUser?.role ?? null,
     loading,
+    login,
+    signup,
+    logout,
     refreshUserRole,
   };
 

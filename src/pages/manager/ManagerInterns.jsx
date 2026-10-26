@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { db } from "../../firebase";
-import { useAuth } from "../../contexts/useAuth";
+import { api } from "../../api";
 import Layout from "../../components/Layout";
-import { notifyError, friendlyFirestoreError } from "../../utils/toast";
+import { notifyError, friendlyApiError } from "../../utils/toast";
 import { theme } from "../../theme";
 import StatsRow from "../../components/StatsRow";
 import { PageSkeleton } from "../../components/Skeleton";
 
 export default function ManagerInterns() {
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [interns, setInterns] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -18,62 +15,35 @@ export default function ManagerInterns() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) return;
-
-    const internsQuery = query(collection(db, "users"), where("managerId", "==", currentUser.uid));
-    const tasksQuery = query(collection(db, "tasks"), where("managerId", "==", currentUser.uid));
-
-    const unsubInterns = onSnapshot(
-      internsQuery,
-      (snapshot) => {
-        setInterns(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-        setLoading(false);
-      },
-      (error) => {
+    let cancelled = false;
+    Promise.all([api.get("/users"), api.get("/tasks"), api.get("/attendance")])
+      .then(([internsData, tasksData, attendanceData]) => {
+        if (cancelled) return;
+        setInterns(internsData);
+        setTasks(tasksData);
+        setAttendance(attendanceData);
+      })
+      .catch((error) => {
         console.error("Interns load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load your interns."));
-        setLoading(false);
-      }
-    );
-
-    const unsubTasks = onSnapshot(
-      tasksQuery,
-      (snapshot) => {
-        setTasks(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
-        console.error("Tasks load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load tasks."));
-      }
-    );
-
-    const unsubAttendance = onSnapshot(
-      collection(db, "attendance"),
-      (snapshot) => {
-        setAttendance(snapshot.docs.map((document) => ({ id: document.id, ...document.data() })));
-      },
-      (error) => {
-        console.error("Attendance load error:", error);
-        notifyError(friendlyFirestoreError(error, "Couldn't load attendance."));
-      }
-    );
-
+        notifyError(friendlyApiError(error, "Couldn't load your interns."));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      unsubInterns();
-      unsubTasks();
-      unsubAttendance();
+      cancelled = true;
     };
-  }, [currentUser]);
+  }, []);
 
   const today = new Date().toISOString().slice(0, 10);
 
   const internRows = useMemo(() => {
     return interns.map((intern) => {
-      const internTasks = tasks.filter((task) => task.internId === intern.id);
+      const internTasks = tasks.filter((task) => task.intern_id === intern.uid);
       const completedTasks = internTasks.filter((task) => task.status === "completed");
-      const currentAttendance = attendance.find((record) => record.internId === intern.id && record.date === today);
-      const attendanceRecords = attendance.filter((record) => record.internId === intern.id);
-      const activeStep = intern.onboardingStep ?? 0;
+      const currentAttendance = attendance.find((record) => record.intern_id === intern.uid && record.date === today);
+      const attendanceRecords = attendance.filter((record) => record.intern_id === intern.uid);
+      const activeStep = intern.onboarding_step ?? 0;
       const onboardingPct = Math.round((activeStep / 5) * 100);
       const taskPct = internTasks.length ? Math.round((completedTasks.length / internTasks.length) * 100) : 0;
 
@@ -94,7 +64,7 @@ export default function ManagerInterns() {
     const taskCompletion = internRows.length
       ? Math.round(internRows.reduce((sum, intern) => sum + intern.taskPct, 0) / internRows.length)
       : 0;
-    const fullyOnboarded = internRows.filter((intern) => (intern.onboardingStep ?? 0) >= 5).length;
+    const fullyOnboarded = internRows.filter((intern) => (intern.onboarding_step ?? 0) >= 5).length;
     return { active, taskCompletion, fullyOnboarded };
   }, [internRows]);
 
@@ -131,7 +101,7 @@ export default function ManagerInterns() {
             <p style={styles.empty}>No interns assigned yet.</p>
           ) : (
             internRows.map((intern) => (
-              <div key={intern.id} style={styles.row}>
+              <div key={intern.uid} style={styles.row}>
                 <div style={styles.avatar}>{intern.name?.[0]?.toUpperCase() || "I"}</div>
                 <div style={styles.rowMain}>
                   <div style={styles.rowHeader}>

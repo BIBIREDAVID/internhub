@@ -11,12 +11,12 @@ export default function AssignTaskModal({ interns, selectedIntern, onSelectInter
             <label style={styles.label}>Select Intern</label>
             <select
               style={styles.input}
-              onChange={(e) => onSelectIntern(interns.find((i) => i.id === e.target.value))}
+              onChange={(e) => onSelectIntern(interns.find((i) => i.uid === e.target.value))}
               defaultValue=""
             >
               <option value="" disabled>Choose an intern...</option>
               {interns.map((i) => (
-                <option key={i.id} value={i.id}>{i.name}</option>
+                <option key={i.uid} value={i.uid}>{i.name}</option>
               ))}
             </select>
           </div>
@@ -45,8 +45,8 @@ export default function AssignTaskModal({ interns, selectedIntern, onSelectInter
           <input
             type="date"
             style={styles.input}
-            value={task.dueDate}
-            onChange={(e) => onChangeTask({ ...task, dueDate: e.target.value })}
+            value={task.due_date}
+            onChange={(e) => onChangeTask({ ...task, due_date: e.target.value })}
           />
         </div>
         <div style={styles.field}>

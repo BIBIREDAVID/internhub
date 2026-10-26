@@ -1,37 +1,34 @@
 #!/usr/bin/env node
 /**
- * Seeds InternHub with realistic demo data: HR, managers, interns, tasks,
- * two weeks of attendance history, and a handful of applications.
- *
- * Requires a Firebase service account key (Admin SDK access) — see the
- * "Demo data" section of README.md for how to get one. This is NOT part of
- * the deployed app; it's a one-off local script for trying InternHub out
- * with real-looking data instead of an empty database.
+ * Seeds InternHub's Postgres database with realistic demo data: HR, managers,
+ * interns, tasks, two weeks of attendance history, and a handful of
+ * applications. This is NOT part of the deployed app; it's a one-off local
+ * script for trying InternHub out with real-looking data instead of an empty
+ * database.
  *
  * Usage:
- *   GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json node scripts/seed.js
+ *   DATABASE_URL=postgres://user:pass@localhost:5432/internhub node scripts/seed.js
+ *
+ * Run scripts/db/migrate.js first to create the schema.
  *
  * Safe to re-run: existing demo accounts (matched by email) are reused
  * rather than duplicated, though it will keep adding new attendance/task
  * records each run — pass --wipe to delete every seeded user first.
  */
 
-import admin from "firebase-admin";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import bcrypt from "bcryptjs";
+import { pool, query } from "../server/db.js";
 
 const DEMO_PASSWORD = "Password123!";
 const WIPE = process.argv.includes("--wipe");
-
-if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !admin.apps.length) {
-  console.error(
-    "Set GOOGLE_APPLICATION_CREDENTIALS to the path of a Firebase service account JSON key first.\n" +
-    "See README.md > Demo data for how to generate one."
-  );
-  process.exit(1);
-}
-
-admin.initializeApp({ credential: admin.credential.applicationDefault() });
-const auth = admin.auth();
-const db = admin.firestore();
+// Every seeded login gets written here (gitignored) so you don't have to
+// remember them.
+const CREDENTIALS_FILE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "seed-credentials.md");
+const seededAccounts = [];
 
 const departments = ["Engineering", "Design", "Data", "Product", "Marketing"];
 
@@ -54,46 +51,41 @@ function todayMinus(days) {
 }
 
 async function upsertUser({ email, name, role, department, managerId, cohortId }) {
-  let userRecord;
-  try {
-    userRecord = await auth.getUserByEmail(email);
-  } catch {
-    userRecord = await auth.createUser({ email, password: DEMO_PASSWORD, displayName: name });
+  seededAccounts.push({ role, name, email, department });
+  const { rows: existingRows } = await query("SELECT uid FROM users WHERE email = $1", [email]);
+  if (existingRows[0]) {
+    return existingRows[0].uid;
   }
 
-  await db.collection("users").doc(userRecord.uid).set(
-    {
+  const uid = crypto.randomUUID();
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+
+  await query(
+    `INSERT INTO users (uid, email, name, role, password_hash, department, manager_id, cohort_id, start_date, end_date, onboarding_step, onboarding_checklist, active, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, TRUE, now())`,
+    [
+      uid,
       email,
       name,
       role,
-      department: department || null,
-      managerId: managerId || null,
-      cohortId: cohortId || null,
-      startDate: role === "intern" ? todayMinus(30) : null,
-      endDate: role === "intern" ? todayMinus(-60) : null,
-      onboardingChecklist: [],
-      onboardingStep: role === "intern" ? Math.floor(Math.random() * 6) : 0,
-      active: true,
-      createdAt: new Date().toISOString(),
-    },
-    { merge: true }
+      passwordHash,
+      department || null,
+      managerId || null,
+      cohortId || null,
+      role === "intern" ? todayMinus(30) : null,
+      role === "intern" ? todayMinus(-60) : null,
+      role === "intern" ? Math.floor(Math.random() * 6) : 0,
+      JSON.stringify([]),
+    ]
   );
 
-  return userRecord.uid;
+  return uid;
 }
 
 async function wipeDemoData() {
   console.log("Wiping previously seeded demo accounts...");
   const allEmails = [hr.email, ...managers.map((m) => m.email), ...internNames.map((_, i) => `intern${i + 1}@example.com`)];
-  for (const email of allEmails) {
-    try {
-      const user = await auth.getUserByEmail(email);
-      await db.collection("users").doc(user.uid).delete();
-      await auth.deleteUser(user.uid);
-    } catch {
-      // Wasn't seeded before — nothing to remove.
-    }
-  }
+  await query("DELETE FROM users WHERE email = ANY($1::text[])", [allEmails]);
 }
 
 async function seed() {
@@ -128,19 +120,23 @@ async function seed() {
     "Design landing page", "Review PR #42", "Prepare demo",
   ];
   for (const internUid of internUids) {
-    const managerUid = (await db.collection("users").doc(internUid).get()).data().managerId;
+    const { rows } = await query("SELECT manager_id FROM users WHERE uid = $1", [internUid]);
+    const managerUid = rows[0]?.manager_id;
     for (let t = 0; t < 3; t++) {
-      await db.collection("tasks").add({
-        title: taskTitles[Math.floor(Math.random() * taskTitles.length)],
-        description: "Seeded demo task.",
-        dueDate: todayMinus(-7 * (t + 1)),
-        priority: ["low", "medium", "high"][t % 3],
-        status: ["pending", "in-progress", "completed"][Math.floor(Math.random() * 3)],
-        internId: internUid,
-        managerId: managerUid,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      await query(
+        `INSERT INTO tasks (task_id, title, description, due_date, priority, status, intern_id, manager_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())`,
+        [
+          crypto.randomUUID(),
+          taskTitles[Math.floor(Math.random() * taskTitles.length)],
+          "Seeded demo task.",
+          todayMinus(-7 * (t + 1)),
+          ["low", "medium", "high"][t % 3],
+          ["pending", "in-progress", "completed"][Math.floor(Math.random() * 3)],
+          internUid,
+          managerUid,
+        ]
+      );
     }
   }
 
@@ -150,39 +146,69 @@ async function seed() {
       const date = todayMinus(d);
       const roll = Math.random();
       const status = roll < 0.08 ? "absent" : roll < 0.18 ? "late" : "present";
-      await db.collection("attendance").doc(`${internUid}_${date}`).set({
-        internId: internUid,
-        date,
-        status,
-        checkIn: status === "absent" ? null : `${date}T09:1${Math.floor(Math.random() * 5)}:00.000Z`,
-        checkOut: status === "absent" ? null : `${date}T17:0${Math.floor(Math.random() * 5)}:00.000Z`,
-        note: "",
-      });
+      await query(
+        `INSERT INTO attendance (attendance_id, intern_id, date, status, check_in, check_out, note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (attendance_id) DO NOTHING`,
+        [
+          `${internUid}_${date}`,
+          internUid,
+          date,
+          status,
+          status === "absent" ? null : `${date}T09:1${Math.floor(Math.random() * 5)}:00.000Z`,
+          status === "absent" ? null : `${date}T17:0${Math.floor(Math.random() * 5)}:00.000Z`,
+          "",
+        ]
+      );
     }
   }
 
   console.log("Seeding applications...");
   const stages = ["new", "screening", "interview", "offer", "rejected"];
   for (let a = 0; a < 12; a++) {
-    await db.collection("applications").add({
-      name: `Applicant ${a + 1}`,
-      email: `applicant${a + 1}@example.com`,
-      department: departments[a % departments.length],
-      status: stages[a % stages.length],
-      cohortId: "2026-summer",
-      educationLevel: "Bachelor's",
-      notes: "Seeded demo application.",
-      createdAt: new Date().toISOString(),
-    });
+    await query(
+      `INSERT INTO applications (application_id, candidate_name, candidate_email, department, stage, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, now())`,
+      [
+        crypto.randomUUID(),
+        `Applicant ${a + 1}`,
+        `applicant${a + 1}@example.com`,
+        departments[a % departments.length],
+        stages[a % stages.length],
+        stages[a % stages.length],
+      ]
+    );
   }
 
   console.log("\nDone. Demo accounts (all use password: %s):", DEMO_PASSWORD);
   console.log(`  HR:      ${hr.email}`);
   managers.forEach((m) => console.log(`  Manager: ${m.email}`));
   console.log(`  Interns: intern1@example.com .. intern${internNames.length}@example.com`);
+
+  writeCredentialsFile();
+  console.log(`\nCredentials saved to ${CREDENTIALS_FILE}`);
+}
+
+function writeCredentialsFile() {
+  const lines = [
+    "# InternHub demo login credentials",
+    "",
+    `Generated by \`scripts/seed.js\` on ${new Date().toISOString()}. Local demo data only — do not commit.`,
+    "",
+    `All accounts use the password: \`${DEMO_PASSWORD}\``,
+    "",
+    "| Role | Name | Email | Password | Department |",
+    "| --- | --- | --- | --- | --- |",
+    ...seededAccounts.map(
+      (a) => `| ${a.role} | ${a.name} | ${a.email} | ${DEMO_PASSWORD} | ${a.department || "—"} |`
+    ),
+    "",
+  ];
+  fs.writeFileSync(CREDENTIALS_FILE, lines.join("\n"));
 }
 
 seed()
+  .then(() => pool.end())
   .then(() => process.exit(0))
   .catch((error) => {
     console.error("Seed failed:", error);
